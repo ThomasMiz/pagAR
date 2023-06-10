@@ -121,11 +121,11 @@ def get_transactions(request):
 
 def create_transaction(request):
     if "source" not in request.data:
-        return Response({"error": "Parameter \"source\" missing"})
+        return Response({"error": 'Parameter "source" missing'})
     if "destination" not in request.data:
-        return Response({"error": "Parameter \"destination\" missing"})
+        return Response({"error": 'Parameter "destination" missing'})
     if "amount" not in request.data:
-        return Response({"error": "Parameter \"amount\" missing"})
+        return Response({"error": 'Parameter "amount" missing'})
 
     source_cbu = request.data["source"]
     destination_cbu = request.data["destination"]
@@ -134,11 +134,11 @@ def create_transaction(request):
     if amount_error is not None:
         return Response(data={"error": amount_error, "field": "amount"}, status=status.HTTP_400_BAD_REQUEST)
 
-    source, source_error = validate_cbu_get_account(source_cbu)
+    source, source_error = validate_cbu_get_account(source_cbu, must_be_local=True)
     if source_error is not None:
         return Response(data={"error": source_error, "field": "source"}, status=status.HTTP_400_BAD_REQUEST)
 
-    destination, destination_error = validate_cbu_get_account(destination_cbu)
+    destination, destination_error = validate_cbu_get_account(destination_cbu, must_be_local=True)
     if destination_error is not None:
         return Response(data={"error": destination_error, "field": "destination"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -147,13 +147,11 @@ def create_transaction(request):
 
     try:
         with transaction.atomic():
-            if source is not None:
-                if amount > source.balance:
-                    return Response({"error": "Insufficient Balance"}, status=status.HTTP_400_BAD_REQUEST)
-                source.balance -= amount
+            if amount > source.balance:
+                return Response({"error": "Insufficient Balance"}, status=status.HTTP_400_BAD_REQUEST)
+            source.balance -= amount
 
-            if destination is not None:
-                destination.balance += amount
+            destination.balance += amount
 
             tx = models.Transaction(source=source, destination=destination, amount=amount)
             tx.save()
