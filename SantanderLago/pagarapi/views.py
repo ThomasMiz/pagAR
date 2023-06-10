@@ -6,7 +6,7 @@ from . import models, serializers, constants, pagination, extractor
 from rest_framework.permissions import AllowAny
 from django.db import transaction, IntegrityError
 from datetime import datetime
-from .validators import validate_cbu_get_account, validate_transaction_amount
+from .validators import validate_cbu_get_account, validate_transaction_amount, validate_account_balance
 
 
 @api_view(['GET', 'POST'])
@@ -14,7 +14,9 @@ from .validators import validate_cbu_get_account, validate_transaction_amount
 def accounts(request):
     if request.method == 'GET':
         return get_accounts(request)
-    return create_account(request)
+    if request.method == 'POST':
+        return create_account(request)
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 def create_account(request):
@@ -27,7 +29,7 @@ def get_accounts(request):
     if err is not None:
         return err
 
-    queryset = models.Account.objects.all()
+    queryset = models.Account.objects.where_active()
     queryset = queryset.order_by('-cbu_raw')
     try:
         query_paginator = Paginator(queryset, page_size)
@@ -47,7 +49,9 @@ def account_by_cbu(request, cbu):
         return get_account(request, cbu)
     if request.method == 'PUT':
         return update_account(request, cbu)
-    return delete_account(request, cbu)
+    if request.method == 'DELETE':
+        return delete_account(request, cbu)
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 def get_account(request, cbu):
@@ -59,22 +63,33 @@ def get_account(request, cbu):
 
 
 def update_account(request, cbu):
-    try:
-        with transaction.atomic():
-            # TODO: Implement
-            account = models.Account.objects.get_by_cbu(cbu)
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-            # account.balance = ...
-            # account.save()
-            # return Response(status=status.HTTP_204_NO_CONTENT)
-    except models.Account.DoesNotExist:
-        return Response(status=status.HTTP_404_NOT_FOUND)
-    return Response(status=status.HTTP_400_BAD_REQUEST)
+    if "balance" not in request.data:
+        return Response({"error": 'Parameter "balance" missing'}, status=status.HTTP_400_BAD_REQUEST)
+
+    balance, balance_error = validate_account_balance(request.data["balance"])
+    if balance_error is not None:
+        return Response(data={"error": balance_error, "field": "balance"}, status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        account, account_error = validate_cbu_get_account(cbu, must_be_local=True)
+        if account_error is not None:
+            return Response(data={"error": account_error, "field": "cbu"}, status=status.HTTP_400_BAD_REQUEST)
+
+        account.balance = balance
+        account.save()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def delete_account(request, id):
-    # TODO: Not implemented yet. Consider implementing logical deletes?
-    return Response(status=status.HTTP_418_IM_A_TEAPOT)
+def delete_account(request, cbu):
+    with transaction.atomic():
+        account, account_error = validate_cbu_get_account(cbu, must_be_local=True)
+        if account_error is not None:
+            return Response(data={"error": account_error, "field": "cbu"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if account.active:
+            account.active = False
+            account.save()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET', 'POST'])
@@ -82,7 +97,9 @@ def delete_account(request, id):
 def transactions(request):
     if request.method == 'GET':
         return get_transactions(request)
-    return create_transaction(request)
+    if request.method == 'POST':
+        return create_transaction(request)
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 def get_transactions(request):
@@ -91,22 +108,23 @@ def get_transactions(request):
         return err
 
     try:
-        filter_params = {}
+        queryset = models.Transaction.objects
 
         start_str = request.GET.get('start')
         if start_str is not None:
-            filter_params["date__gte"] = datetime.strptime(start_str, constants.DATE_FORMAT)
+            queryset = queryset.filter(date__gte=datetime.strptime(start_str, constants.DATE_FORMAT))
         end_str = request.GET.get('end')
         if end_str is not None:
-            filter_params["date__lte"] = datetime.strptime(end_str, constants.DATE_FORMAT)
+            queryset = queryset.filter(date__lte=datetime.strptime(end_str, constants.DATE_FORMAT))
+
         source_str = request.GET.get('source')
         if source_str is not None:
-            filter_params['source'] = str(source_str)
+            queryset = queryset.where_source_cbu(source_str)
         destination_str = request.GET.get('destination')
         if destination_str is not None:
-            filter_params['destination'] = str(destination_str)
+            queryset = queryset.where_destination_cbu(destination_str)
 
-        queryset = models.Transaction.objects.filter(**filter_params).order_by('-date')
+        queryset = queryset.order_by('-date')
         query_paginator = Paginator(queryset, page_size)
         query_data = query_paginator.page(page)
         serializer = serializers.TransactionSerializer(query_data, many=True)
@@ -121,11 +139,11 @@ def get_transactions(request):
 
 def create_transaction(request):
     if "source" not in request.data:
-        return Response({"error": 'Parameter "source" missing'})
+        return Response({"error": 'Parameter "source" missing'}, status=status.HTTP_400_BAD_REQUEST)
     if "destination" not in request.data:
-        return Response({"error": 'Parameter "destination" missing'})
+        return Response({"error": 'Parameter "destination" missing'}, status=status.HTTP_400_BAD_REQUEST)
     if "amount" not in request.data:
-        return Response({"error": 'Parameter "amount" missing'})
+        return Response({"error": 'Parameter "amount" missing'}, status=status.HTTP_400_BAD_REQUEST)
 
     source_cbu = request.data["source"]
     destination_cbu = request.data["destination"]
@@ -134,23 +152,23 @@ def create_transaction(request):
     if amount_error is not None:
         return Response(data={"error": amount_error, "field": "amount"}, status=status.HTTP_400_BAD_REQUEST)
 
-    source, source_error = validate_cbu_get_account(source_cbu, must_be_local=True)
-    if source_error is not None:
-        return Response(data={"error": source_error, "field": "source"}, status=status.HTTP_400_BAD_REQUEST)
-
-    destination, destination_error = validate_cbu_get_account(destination_cbu, must_be_local=True)
-    if destination_error is not None:
-        return Response(data={"error": destination_error, "field": "destination"}, status=status.HTTP_400_BAD_REQUEST)
-
-    if destination is None and source is None:
-        return Response(data={"error": "At least one of the accounts must belong to this bank"}, status=status.HTTP_400_BAD_REQUEST)
-
     try:
         with transaction.atomic():
+            source, source_error = validate_cbu_get_account(source_cbu, must_be_local=True)
+            if source_error is not None:
+                return Response(data={"error": source_error, "field": "source"}, status=status.HTTP_400_BAD_REQUEST)
+
+            destination, destination_error = validate_cbu_get_account(destination_cbu, must_be_local=True, must_be_active=True)
+            if destination_error is not None:
+                return Response(data={"error": destination_error, "field": "destination"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if source == destination:
+                return Response({"error": "Transactions must be between different accounts"}, status=status.HTTP_400_BAD_REQUEST)
+
             if amount > source.balance:
                 return Response({"error": "Insufficient Balance"}, status=status.HTTP_400_BAD_REQUEST)
-            source.balance -= amount
 
+            source.balance -= amount
             destination.balance += amount
 
             tx = models.Transaction(source=source, destination=destination, amount=amount)

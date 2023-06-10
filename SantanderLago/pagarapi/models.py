@@ -25,8 +25,8 @@ class Account(models.Model):
         return self.cbu
 
     class QuerySet(models.QuerySet):
-        def is_active(self):
-            return self.filter(active=False)
+        def where_active(self):
+            return self.filter(active=True)
 
         def get_by_cbu(self, cbu):
             entity_number, branch_number, account_number, is_ok = decompose_cbu(cbu)
@@ -43,3 +43,23 @@ class Transaction(models.Model):
     destination = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name='destination')
     amount = models.FloatField(blank=False, null=False, default=0.0)
     date = models.DateTimeField(blank=False, null=False, auto_now_add=True)
+
+    def __str__(self):
+        return f"From {self.source.cbu} to {self.destination.cbu} {self.amount} at {self.date}"
+
+    class QuerySet(models.QuerySet):
+        def where_source_cbu(self, cbu):
+            entity_number, branch_number, account_number, is_ok = decompose_cbu(cbu)
+            if entity_number != int(CBU_ENTITY_NUMBER):
+                raise Transaction.DoesNotExist
+            cbu_raw = account_number + branch_number * 10000000000000
+            return self.filter(source__cbu_raw=cbu_raw)
+
+        def where_destination_cbu(self, cbu):
+            entity_number, branch_number, account_number, is_ok = decompose_cbu(cbu)
+            if entity_number != int(CBU_ENTITY_NUMBER):
+                raise Transaction.DoesNotExist
+            cbu_raw = account_number + branch_number * 10000000000000
+            return self.filter(destination__cbu_raw=cbu_raw)
+
+    objects = QuerySet.as_manager()

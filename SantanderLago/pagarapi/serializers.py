@@ -5,7 +5,7 @@ from .models import Account, Transaction
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
-        fields = ('cbu', 'balance')
+        fields = ('cbu', 'balance', 'active')
 
 
 class TransactionSerializer(serializers.ModelSerializer):
