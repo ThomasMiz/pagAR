@@ -26,9 +26,9 @@ def cbu_from_raw(branch_number: (int | str), account_number: (int | str)) -> str
 
 def decompose_cbu(cbu: (str | int)) -> tuple[int, int, int, bool]:
     """Decomposes a CBU and returns its entity number, branch number, and account number (in that order)"""
-    cbu = cbu.zfill(22)
-    entity_number = int(cbu[0, 3])
-    branch_number = int(cbu[3, 7])
-    account_number = int(cbu[8, 21])
+    cbu = str(cbu).zfill(22)
+    entity_number = int(cbu[0:3])
+    branch_number = int(cbu[3:7])
+    account_number = int(cbu[8:21])
     is_ok = int(cbu[7]) == calc_cbu_checksum1(entity_number, branch_number) and int(cbu[21]) == calc_cbu_checksum2(account_number)
     return entity_number, branch_number, account_number, is_ok

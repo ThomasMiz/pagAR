@@ -2,10 +2,11 @@ from django.core.paginator import Paginator, EmptyPage
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
-from pagarapi import forms, models, serializers, constants, pagination, extractor
+from . import models, serializers, constants, pagination, extractor
 from rest_framework.permissions import AllowAny
 from django.db import transaction, IntegrityError
 from datetime import datetime
+from .validators import validate_cbu_get_account, validate_transaction_amount
 
 
 @api_view(['GET', 'POST'])
@@ -41,34 +42,32 @@ def get_accounts(request):
 
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([AllowAny])
-def account_by_id(request, id):
+def account_by_cbu(request, cbu):
     if request.method == 'GET':
-        return get_account(request, id)
+        return get_account(request, cbu)
     if request.method == 'PUT':
-        return update_account(request, id)
-    return delete_account(request, id)
+        return update_account(request, cbu)
+    return delete_account(request, cbu)
 
 
-def get_account(request, id):
+def get_account(request, cbu):
     try:
-        account = models.Account.objects.get(pk=id)
+        account = models.Account.objects.get_by_cbu(cbu)
         return Response(serializers.AccountSerializer(account, many=False).data, status=status.HTTP_200_OK)
     except models.Account.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
 
-def update_account(request, id):
+def update_account(request, cbu):
     try:
-        user = models.User.objects.get(pk=id)
-        serializer = serializers.UserDetailsSerializer(data=request.data, context={'user': user})
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        user.account.balance = serializer.validated_data.get('account')['balance']
-        user.account.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    except models.User.DoesNotExist:
+        with transaction.atomic():
+            # TODO: Implement
+            account = models.Account.objects.get_by_cbu(cbu)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+            # account.balance = ...
+            # account.save()
+            # return Response(status=status.HTTP_204_NO_CONTENT)
+    except models.Account.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
     return Response(status=status.HTTP_400_BAD_REQUEST)
 
@@ -100,14 +99,14 @@ def get_transactions(request):
         end_str = request.GET.get('end')
         if end_str is not None:
             filter_params["date__lte"] = datetime.strptime(end_str, constants.DATE_FORMAT)
-        origin_str = request.GET.get('origin')
-        if origin_str is not None:
-            filter_params['origin'] = int(origin_str)
+        source_str = request.GET.get('source')
+        if source_str is not None:
+            filter_params['source'] = str(source_str)
         destination_str = request.GET.get('destination')
         if destination_str is not None:
-            filter_params['destination'] = int(destination_str)
+            filter_params['destination'] = str(destination_str)
 
-        queryset = models.Transaction.objects.filter(**filter_params).order_by('-id')
+        queryset = models.Transaction.objects.filter(**filter_params).order_by('-date')
         query_paginator = Paginator(queryset, page_size)
         query_data = query_paginator.page(page)
         serializer = serializers.TransactionSerializer(query_data, many=True)
@@ -121,22 +120,45 @@ def get_transactions(request):
 
 
 def create_transaction(request):
-    form = forms.CreateTransactionForm(request.POST)
-    if not form.is_valid():
-        return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+    if "source" not in request.data:
+        return Response({"error": "Parameter \"source\" missing"})
+    if "destination" not in request.data:
+        return Response({"error": "Parameter \"destination\" missing"})
+    if "amount" not in request.data:
+        return Response({"error": "Parameter \"amount\" missing"})
 
-    destination = models.User.objects.get(id=form.cleaned_data['destination'])
-    amount = form.cleaned_data['amount']
+    source_cbu = request.data["source"]
+    destination_cbu = request.data["destination"]
+
+    amount, amount_error = validate_transaction_amount(request.data["amount"])
+    if amount_error is not None:
+        return Response(data={"error": amount_error, "field": "amount"}, status=status.HTTP_400_BAD_REQUEST)
+
+    source, source_error = validate_cbu_get_account(source_cbu)
+    if source_error is not None:
+        return Response(data={"error": source_error, "field": "source"}, status=status.HTTP_400_BAD_REQUEST)
+
+    destination, destination_error = validate_cbu_get_account(destination_cbu)
+    if destination_error is not None:
+        return Response(data={"error": destination_error, "field": "destination"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if destination is None and source is None:
+        return Response(data={"error": "At least one of the accounts must belong to this bank"}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
         with transaction.atomic():
-            if amount > request.user.account.balance:
-                return Response({"error": "Insufficient Balance"}, status=status.HTTP_400_BAD_REQUEST)
-            tx = models.Transaction(origin=request.user, destination=destination, amount=amount)
-            request.user.account.balance -= amount
-            destination.account.balance += amount
+            if source is not None:
+                if amount > source.balance:
+                    return Response({"error": "Insufficient Balance"}, status=status.HTTP_400_BAD_REQUEST)
+                source.balance -= amount
+
+            if destination is not None:
+                destination.balance += amount
+
+            tx = models.Transaction(source=source, destination=destination, amount=amount)
             tx.save()
-            request.user.account.save()
-            destination.account.save()
+            source.save()
+            destination.save()
             return Response(serializers.TransactionSerializer(tx, many=False).data, status=status.HTTP_201_CREATED)
     except IntegrityError:
-        return Response({"error": "Error while transferring founds"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Error while transferring founds"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

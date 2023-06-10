@@ -29,15 +29,17 @@ class Account(models.Model):
             return self.filter(active=False)
 
         def get_by_cbu(self, cbu):
-            entity_number, branch_number, account_number = decompose_cbu(cbu)
+            entity_number, branch_number, account_number, is_ok = decompose_cbu(cbu)
             if entity_number != int(CBU_ENTITY_NUMBER):
                 raise Account.DoesNotExist
             cbu_raw = account_number + branch_number * 10000000000000
             return self.get(cbu_raw=cbu_raw)
 
+    objects = QuerySet.as_manager()
+
 
 class Transaction(models.Model):
-    origin = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name='origin')
+    source = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name='source')
     destination = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name='destination')
     amount = models.FloatField(blank=False, null=False, default=0.0)
     date = models.DateTimeField(blank=False, null=False, auto_now_add=True)
