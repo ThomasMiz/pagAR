@@ -43,6 +43,8 @@ class Transaction(models.Model):
     destination = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name='destination')
     amount = models.FloatField(blank=False, null=False, default=0.0)
     date = models.DateTimeField(blank=False, null=False, auto_now_add=True)
+    motive = models.CharField(max_length=200, null=True)
+    tag = models.CharField(max_length=32, null=True)
 
     def __str__(self):
         return f"From {self.source.cbu} to {self.destination.cbu} {self.amount} at {self.date}"

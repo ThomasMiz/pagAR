@@ -147,6 +147,8 @@ def create_transaction(request):
 
     source_cbu = request.data["source"]
     destination_cbu = request.data["destination"]
+    motive = None if "motive" not in request.data else request.data["motive"]
+    tag = None if "tag" not in request.data else request.data["tag"]
 
     amount, amount_error = validate_transaction_amount(request.data["amount"])
     if amount_error is not None:
@@ -171,10 +173,26 @@ def create_transaction(request):
             source.balance -= amount
             destination.balance += amount
 
-            tx = models.Transaction(source=source, destination=destination, amount=amount)
+            tx = models.Transaction(source=source, destination=destination, amount=amount, motive=motive, tag=tag)
             tx.save()
             source.save()
             destination.save()
             return Response(serializers.TransactionSerializer(tx, many=False).data, status=status.HTTP_201_CREATED)
     except IntegrityError:
         return Response({"error": "Error while transferring founds"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def transaction_by_id(request, id):
+    if request.method == 'GET':
+        return get_transaction(request, id)
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+def get_transaction(request, id):
+    try:
+        tx = models.Transaction.objects.get(id=id)
+        return Response(serializers.TransactionSerializer(tx, many=False).data, status=status.HTTP_200_OK)
+    except models.Account.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
