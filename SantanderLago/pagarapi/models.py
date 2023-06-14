@@ -21,6 +21,10 @@ class Account(models.Model):
         account_number = self.cbu_raw % 10000000000000
         return cbu_from_raw(branch_number, account_number)
 
+    @property
+    def is_central(self):
+        return self.cbu_raw == 0
+
     def __str__(self):
         return self.cbu
 
@@ -34,6 +38,12 @@ class Account(models.Model):
                 raise Account.DoesNotExist
             cbu_raw = account_number + branch_number * 10000000000000
             return self.get(cbu_raw=cbu_raw)
+
+        def create_central(self):
+            return self.create(cbu_raw=0)
+
+        def get_central(self):
+            return self.get(cbu_raw=0)
 
     objects = QuerySet.as_manager()
 

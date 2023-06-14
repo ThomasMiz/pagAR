@@ -20,7 +20,13 @@ def accounts(request):
 
 
 def create_account(request):
-    account = models.Account.objects.create()
+    if "central" in request.data and bool(request.data["central"]):
+        try:
+            account = models.Account.objects.create_central()
+        except IntegrityError:
+            return Response(status=status.HTTP_409_CONFLICT)
+    else:
+        account = models.Account.objects.create()
     return Response(serializers.AccountSerializer(account, many=False).data, status=status.HTTP_201_CREATED)
 
 
@@ -85,6 +91,8 @@ def delete_account(request, cbu):
         account, account_error = validate_cbu_get_account(cbu, must_be_local=True)
         if account_error is not None:
             return Response(data={"error": account_error, "field": "cbu"}, status=status.HTTP_400_BAD_REQUEST)
+        if account.is_central:
+            return Response(data={"error": "Cannot delete central account", "field": "cbu"}, status=status.HTTP_400_BAD_REQUEST)
 
         if account.active:
             account.active = False
@@ -167,7 +175,7 @@ def create_transaction(request):
             if source == destination:
                 return Response({"error": "Transactions must be between different accounts"}, status=status.HTTP_400_BAD_REQUEST)
 
-            if amount > source.balance:
+            if amount > source.balance and not source.is_central:
                 return Response({"error": "Insufficient Balance"}, status=status.HTTP_400_BAD_REQUEST)
 
             source.balance -= amount
