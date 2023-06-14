@@ -132,6 +132,10 @@ def get_transactions(request):
         if destination_str is not None:
             queryset = queryset.where_destination_cbu(destination_str)
 
+        involving_str = request.GET.get('involving')
+        if involving_str is not None:
+            queryset = queryset.involving_cbu(involving_str)
+
         queryset = queryset.order_by('-date')
         query_paginator = Paginator(queryset, page_size)
         query_data = query_paginator.page(page)

@@ -74,4 +74,11 @@ class Transaction(models.Model):
             cbu_raw = account_number + branch_number * 10000000000000
             return self.filter(destination__cbu_raw=cbu_raw)
 
+        def involving_cbu(self, cbu):
+            entity_number, branch_number, account_number, is_ok = decompose_cbu(cbu)
+            if entity_number != int(CBU_ENTITY_NUMBER):
+                raise Transaction.DoesNotExist
+            cbu_raw = account_number + branch_number * 10000000000000
+            return self.filter(models.Q(destination__cbu_raw=cbu_raw) | models.Q(source__cbu_raw=cbu_raw))
+
     objects = QuerySet.as_manager()
