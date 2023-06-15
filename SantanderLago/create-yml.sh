@@ -1,0 +1,1 @@
+python manage.py spectacular --color --file swagger-schema.yml

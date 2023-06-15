@@ -1,4 +1,5 @@
 from django.core.paginator import Paginator, EmptyPage
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,6 +10,18 @@ from datetime import datetime
 from .validators import validate_cbu_get_account, validate_transaction_amount, validate_account_balance
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Lists all active accounts.",
+        request=None,
+        responses=serializers.AccountSerializer,
+    ),
+    post=extend_schema(
+        description="Creates a new account. If ?central=true is specified, attempts to create a central account (with a CBU where all non-verification digits are 0) if it doesn't already exist.",
+        request=None,
+        responses=serializers.AccountSerializer,
+    ),
+)
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def accounts(request):
@@ -48,6 +61,23 @@ def get_accounts(request):
         return Response(status=status.HTTP_404_NOT_FOUND)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Gets an account by  CBU.",
+        request=None,
+        responses=serializers.AccountSerializer,
+    ),
+    put=extend_schema(
+        description="Updates an account's balance",
+        request=None,
+        responses=None,
+    ),
+    delete=extend_schema(
+        description="Creates a new account. If ?central=true is specified, attempts to create a central account (with a CBU where all non-verification digits are 0) if it doesn't already exist.",
+        request=None,
+        responses=serializers.AccountSerializer,
+    ),
+)
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([AllowAny])
 def account_by_cbu(request, cbu):
@@ -100,6 +130,18 @@ def delete_account(request, cbu):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Lists all transactions.",
+        request=None,
+        responses=serializers.TransactionSerializer,
+    ),
+    post=extend_schema(
+        description="Creates a new transaction.",
+        request=serializers.TransactionSerializer,
+        responses=serializers.TransactionSerializer,
+    ),
+)
 @api_view(['GET', 'POST'])
 @permission_classes([AllowAny])
 def transactions(request):
@@ -194,6 +236,13 @@ def create_transaction(request):
         return Response({"error": "Error while transferring founds"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description="Gets a transaction by id.",
+        request=None,
+        responses=serializers.AccountSerializer,
+    ),
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def transaction_by_id(request, id):

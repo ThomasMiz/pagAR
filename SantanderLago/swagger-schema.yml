@@ -1,0 +1,225 @@
+openapi: 3.0.3
+info:
+  title: Santander Lago API
+  version: 1.0.0
+  description: Not affiliated in any way with Santander Río
+paths:
+  /api/accounts:
+    get:
+      operationId: api_accounts_retrieve
+      description: Lists all active accounts.
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+    post:
+      operationId: api_accounts_create
+      description: Creates a new account. If ?central=true is specified, attempts
+        to create a central account (with a CBU where all non-verification digits
+        are 0) if it doesn't already exist.
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+  /api/accounts/{cbu}:
+    get:
+      operationId: api_accounts_retrieve_2
+      description: Gets an account by  CBU.
+      parameters:
+      - in: path
+        name: cbu
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+    put:
+      operationId: api_accounts_update
+      description: Updates an account's balance
+      parameters:
+      - in: path
+        name: cbu
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: api_accounts_destroy
+      description: Creates a new account. If ?central=true is specified, attempts
+        to create a central account (with a CBU where all non-verification digits
+        are 0) if it doesn't already exist.
+      parameters:
+      - in: path
+        name: cbu
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/transactions:
+    get:
+      operationId: api_transactions_retrieve
+      description: Lists all transactions.
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+    post:
+      operationId: api_transactions_create
+      description: Creates a new transaction.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+  /api/transactions/{id}:
+    get:
+      operationId: api_transactions_retrieve_2
+      description: Gets a transaction by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+components:
+  schemas:
+    Account:
+      type: object
+      properties:
+        cbu:
+          type: string
+          readOnly: true
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,22}(?:\.\d{0,2})?$
+        active:
+          type: boolean
+      required:
+      - cbu
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        source:
+          type: string
+          readOnly: true
+        destination:
+          type: string
+          readOnly: true
+        amount:
+          type: number
+          format: double
+        date:
+          type: string
+          format: date-time
+          readOnly: true
+        motive:
+          type: string
+          nullable: true
+          maxLength: 200
+        tag:
+          type: string
+          nullable: true
+          maxLength: 32
+      required:
+      - date
+      - destination
+      - id
+      - source
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

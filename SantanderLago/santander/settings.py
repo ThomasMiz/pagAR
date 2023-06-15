@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 
     'pagarapi.apps.ApiConfig',
     'rest_framework',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -137,4 +138,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# SWAGGER drf_spectacular SETTINGS
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Santander Lago API',
+    'DESCRIPTION': 'Not affiliated in any way with Santander Río',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
 }
