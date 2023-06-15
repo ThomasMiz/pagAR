@@ -16,6 +16,10 @@ Including another URLconf
 """
 from django.urls import path, include
 
+
 urlpatterns = [
     path('api/', include('pagarapi.urls'))
 ]
+
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+urlpatterns += staticfiles_urlpatterns()
