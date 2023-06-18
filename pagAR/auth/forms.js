@@ -1,14 +1,16 @@
 const Joi = require('joi')
-const cbu = require('./cbu');
+const cbuUtils = require('../cbuUtils');
 
 function cbuDigitsValidator(value, helpers) {
-    if (cbu.isValid(value))
+    if (cbuUtils.isValid(value))
         return value;
     return helpers.error('any.invalid');
 }
 
+const alias_regex = /^[a-z][0-9a-z\.-]{5,19}$/;
+
 const registerSchema = Joi.object({
-    alias: Joi.string().min(6).max(20).pattern(/^[0-9a-z\.-]+$/).required(),
+    alias: Joi.string().min(6).max(20).pattern(alias_regex).lowercase().required(),
 
     password: Joi.string().min(8).required(),
 
@@ -23,7 +25,7 @@ function registerForm(data) {
 }
 
 const loginSchema = Joi.object({
-    alias: Joi.string().min(6).max(20).pattern(/^[0-9a-z\.-]+$/).required(),
+    alias: Joi.string().min(6).max(20).pattern(alias_regex).lowercase().required(),
 
     password: Joi.string().min(8).required(),
 });

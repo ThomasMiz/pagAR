@@ -3,6 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
 const database = require('./database');
+const entityApi = require('./entityApi');
+const initializeEntityApis = entityApi.initializeEntityApis;
 
 const conf = {};
 
@@ -33,10 +35,10 @@ try {
 }
 
 async function main() {
-    console.info("Connecting to database...");
+    console.info("[INFO] Connecting to database...");
     await database.connect(conf);
 
-    console.info("Starting up Express server...");
+    console.info("[INFO] Starting up Express server...");
     const app = express();
 
     app.use(cors());
@@ -44,24 +46,27 @@ async function main() {
 
     app.use('/', require('./routes/test'));
 
-    app.use('/api/auth', require('./routes/auth'));
+    app.use('/api/auth', require('./auth/auth'));
     app.use('/api/accounts', require('./routes/accounts'));
 
     const server = app.listen(conf.port, conf.address, () => {
-        console.info(`pagAR API running at http://${conf.address}:${conf.port}/`);
+        console.info(`[INFO] pagAR API running at http://${conf.address}:${conf.port}/`);
     });
 
     const sig_handler = () => {
-        console.info('Shutting down server...')
+        console.info('[INFO] Shutting down server...')
 
         server.close(() => {
-            console.info('Closing database...');
+            console.info('[INFO] Closing database...');
             database.close();
         })
     };
 
     process.on('SIGTERM', sig_handler);
     process.on('SIGINT', sig_handler);
+
+    console.info("[INFO] Initializing financial entity APIs");
+    await initializeEntityApis();
 };
 
-main().catch(e => console.error("Failed to start server: ", e));
+main().catch(e => console.error("[ERROR] Exception occurred while starting server: ", e));

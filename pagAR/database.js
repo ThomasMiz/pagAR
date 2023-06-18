@@ -47,7 +47,7 @@ async function createAccount(alias, password, cbu, firstName, lastName) {
     console.info(`[INFO] Created account with alias ${alias} and cbu ${cbu}`);
 }
 
-async function getAccount(alias) {
+async function getAccountByAlias(alias) {
     const result = await getClientOrThrow().execute(
         "SELECT * FROM accounts WHERE alias = ?",
         [alias],
@@ -64,10 +64,10 @@ async function getAccount(alias) {
     };
 }
 
-async function getAccount(alias) {
+async function getAccountByCbu(cbu) {
     const result = await getClientOrThrow().execute(
-        "SELECT * FROM accounts WHERE alias = ?",
-        [alias],
+        "SELECT * FROM accounts WHERE cbu = ?",
+        [cbu],
         {prepare: true}
     );
 
@@ -84,4 +84,5 @@ async function getAccount(alias) {
 module.exports.connect = connect;
 module.exports.close = close;
 module.exports.createAccount = createAccount;
-module.exports.getAccount = getAccount;
+module.exports.getAccountByAlias = getAccountByAlias;
+module.exports.getAccountByCbu = getAccountByCbu;

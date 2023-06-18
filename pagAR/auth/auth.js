@@ -1,8 +1,8 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const forms = require('../forms');
-const jwt_secret = require('../jwt_secret');
+const forms = require('./forms');
+const jwtSecret = require('../jwtSecret');
 const database = require('../database');
 
 router.post('/register', async (req, res) => {
@@ -39,11 +39,11 @@ router.post('/login', async (req, res) => {
     if (error)
         return res.status(400).send(error.details);
 
-    const user = await database.getAccount(req.body.alias);
+    const user = await database.getAccountByAlias(req.body.alias);
     if (!user || !bcrypt.compareSync(req.body.password, user.password))
         return res.status(400).send("Invalid alias or password");
 
-    const token = jwt.sign({alias: user.alias}, jwt_secret);
+    const token = jwt.sign({alias: user.alias}, jwtSecret);
     return res.status(200).send({"token": token, "user": {
         alias: user.alias,
         cbu: user.cbu,
