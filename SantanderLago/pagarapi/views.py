@@ -120,10 +120,12 @@ def get_transactions(request):
 
         start_str = request.GET.get('start')
         if start_str is not None:
-            queryset = queryset.filter(date__gte=datetime.strptime(start_str, constants.DATE_FORMAT))
+            start_str = start_str.rstrip('Z')
+            queryset = queryset.filter(date__gte=datetime.fromisoformat(start_str))
         end_str = request.GET.get('end')
         if end_str is not None:
-            queryset = queryset.filter(date__lte=datetime.strptime(end_str, constants.DATE_FORMAT))
+            end_str = end_str.rstrip('Z')
+            queryset = queryset.filter(date__lte=datetime.fromisoformat(end_str))
 
         source_str = request.GET.get('source')
         if source_str is not None:

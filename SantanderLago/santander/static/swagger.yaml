@@ -139,7 +139,7 @@ paths:
             format: decimal
             pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$
           required: false
-          description: Minimum date inclusive in "YYYY-MM-DD hh:mm:ss" format
+          description: Minimum date inclusive in ISO format ("YYYY-MM-DDThh:mm:ss.mmmmZ")
         - in: query
           name: end
           schema:
@@ -147,7 +147,7 @@ paths:
             format: decimal
             pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$
           required: false
-          description: Maximum date inclusive in "YYYY-MM-DD hh:mm:ss" format
+          description: Maximum date inclusive in ISO format ("YYYY-MM-DDThh:mm:ss.mmmmZ")
         - in: query
           name: source
           schema:

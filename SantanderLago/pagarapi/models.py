@@ -49,8 +49,8 @@ class Account(models.Model):
 
 
 class Transaction(models.Model):
-    source = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name='source')
-    destination = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name='destination')
+    source = models.ForeignKey(Account, on_delete=models.CASCADE, null=True, related_name='source')
+    destination = models.ForeignKey(Account, on_delete=models.CASCADE, null=True, related_name='destination')
     amount = models.DecimalField(max_digits=24, decimal_places=2, null=False, default=0.0)
     date = models.DateTimeField(blank=False, null=False, auto_now_add=True)
     motive = models.CharField(max_length=200, null=True)
