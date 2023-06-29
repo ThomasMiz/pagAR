@@ -15,7 +15,7 @@ router.post('/register', async (req, res) => {
     let cbu = req.body.cbu;
     if (cbu) {
         try {
-            const existingUser = await database.getAccountByCbu(cbu);
+            const existingUser = await database.getUserByCbu(cbu);
             if (existingUser)
                 return res.status(400).send({message: "An account with said CBU already exists"});
         } catch (error) {
@@ -42,7 +42,7 @@ router.post('/register', async (req, res) => {
     const hash = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(10));
 
     try {
-        await database.createAccount(req.body.alias, hash, cbu, req.body.firstName, req.body.lastName);
+        await database.createUser(req.body.alias, hash, cbu, req.body.firstName, req.body.lastName);
     } catch (e) {
         return res.status(409).send({message: "Alias already taken"});
     }
@@ -50,7 +50,7 @@ router.post('/register', async (req, res) => {
     try {
         return res.status(201).send({
             alias: req.body.alias,
-            cbu: req.body.cbu,
+            cbu: cbu,
             firstName: req.body.firstName,
             lastName: req.body.lastName
         });
@@ -64,7 +64,7 @@ router.post('/login', async (req, res) => {
     if (error)
         return res.status(400).send(error.details);
 
-    const user = await database.getAccountByAlias(req.body.alias);
+    const user = await database.getUserByAlias(req.body.alias);
     if (!user || !bcrypt.compareSync(req.body.password, user.password))
         return res.status(400).send("Invalid alias or password");
 

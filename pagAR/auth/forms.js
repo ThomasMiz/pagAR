@@ -16,8 +16,8 @@ const registerSchema = Joi.object({
 
     cbu: Joi.string().length(22).custom(cbuDigitsValidator, 'Verification digits match'),
 
-    firstName: Joi.string().min(6).max(20).pattern(/^[0-9\.\-A-Za-záéíóú]+$/).required(),
-    lastName: Joi.string().min(6).max(20).pattern(/^[0-9\.\-A-Za-záéíóú]+$/).required(),
+    firstName: Joi.string().min(3).max(20).pattern(/^[0-9\.\-A-Za-záéíóú]+$/).required(),
+    lastName: Joi.string().min(3).max(20).pattern(/^[0-9\.\-A-Za-záéíóú]+$/).required(),
 });
 
 function registerForm(data) {
