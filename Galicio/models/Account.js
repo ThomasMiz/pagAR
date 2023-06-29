@@ -1,35 +1,37 @@
 const mongoose = require('mongoose')
 const cbuUtils = require('../cbuUtils')
 
+const Schema = mongoose.Schema
 const CBU_ENTITY_NUMBER = 2;
+let current_raw_cbu = 0
 
-const AccountSchema = new mongoose.Schema({
+const AccountSchema = new Schema({
     cbu_raw: {
-        type: {
-            Number,
-            validate: {
-                validator: function (value) {
-                    return /^\d{20}$/.test(value);
-                },
-                message: 'The cbu must be a 20 digits number'
-            }},
-        required: true,
+        type: Number,
         unique: true,
     },
 
     balance: {
         type: Number,
-        required: true,
         default: 0.0
     },
 
     is_active: {
         type: Boolean,
-        required: true,
         default: true
     }
 });
 
+AccountSchema.pre('save', async function (next) {
+    if (this.isNew) {
+        const latestAccount = await this.constructor.findOne({}, {}, {sort: {cbu_raw: -1}});
+        if (latestAccount) {
+            current_raw_cbu = latestAccount.cbu_raw + 1;
+        }
+        this.cbu_raw = current_raw_cbu
+    }
+    next();
+});
 
 // Properties
 AccountSchema.virtual('cbu').get(function() {
@@ -54,10 +56,6 @@ AccountSchema.query.get_by_cbu = function(cbu) {
     }
     const cbu_raw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000;
     return this.where({cbu_raw}).findOne();
-}
-
-AccountSchema.query.create_central = function() {
-    return this.create({ cbu_raw: 0 });
 }
 
 AccountSchema.query.get_central = function() {
