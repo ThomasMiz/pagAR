@@ -4,20 +4,45 @@ const jwt = require('jsonwebtoken');
 const forms = require('./forms');
 const jwtSecret = require('../jwtSecret');
 const database = require('../database');
+const entityApi = require('../entityApi')
 
 router.post('/register', async (req, res) => {
     const {error} = forms.registerForm(req.body);
     if (error)
         return res.status(400).send(error.details);
 
-    // TODO: Verify CBU exists and belongs to an active account, or create account if no CBU was specified.
-    if (!req.body.cbu)
-        return res.status(501).send({message: "Server does not support creating CBUs yet"});
+    // Verify CBU exists and belongs to an active account, or create account if no CBU was specified.
+    let cbu = req.body.cbu;
+    if (cbu) {
+        try {
+            const existingUser = await database.getAccountByCbu(cbu);
+            if (existingUser)
+                return res.status(400).send({message: "An account with said CBU already exists"});
+        } catch (error) {
+            return res.status(500).send({message: "Try again later"});
+        }
+
+        try {
+            existingAccount = await entityApi.getAccountByCbu(cbu);
+            if (!existingAccount)
+                throw 'No such account';
+        } catch (error) {
+            return res.status(400).send({message: "Couldn't find an account with CBU " + cbu});
+        }
+    } else {
+        newAccount = await entityApi.createAccount();
+        cbu = newAccount.cbu;
+
+        if (!cbu) {
+            return res.status(501).send({message: "Error creating account, try again later"});
+        }
+    }
+
 
     const hash = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(10));
 
     try {
-        await database.createAccount(req.body.alias, hash, req.body.cbu, req.body.firstName, req.body.lastName);
+        await database.createAccount(req.body.alias, hash, cbu, req.body.firstName, req.body.lastName);
     } catch (e) {
         return res.status(409).send({message: "Alias already taken"});
     }

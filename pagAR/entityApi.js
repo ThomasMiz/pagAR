@@ -71,6 +71,7 @@ class EntityApi {
 }
 
 const entityApis = new Map();
+let allEntityNumbers = []
 
 function getApiForEntityOrThrow(entityNumber) {
     const apiInstance = entityApis.get(entityNumber);
@@ -91,6 +92,10 @@ async function getAccounts(entityNumber, pageNumber, pageSize) {
 }
 
 async function createAccount(entityNumber) {
+    if (!entityNumber) {
+        entityNumber = allEntityNumbers[parseInt(Math.random() * allEntityNumbers.length)];
+    }
+
     const response = await getApiForEntityOrThrow(entityNumber).createAccount();
     return response.data;
 }
@@ -142,6 +147,7 @@ async function initializeEntityApis() {
     // Financial Entities are listed in this map, with the key being the entity number.
     entityApis.set(1, new EntityApi("http://localhost:8000", 1, "Santander Lago"));
 
+    allEntityNumbers = [... entityApis.keys()]
     // For each entity API, call the create central account endpoint.
     let promises = [];
     entityApis.forEach(entityApi => {
