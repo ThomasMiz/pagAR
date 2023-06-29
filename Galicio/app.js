@@ -1,10 +1,7 @@
 const express = require('express');
-const cors = require('cors');
 const dotenv = require('dotenv');
 const fs = require('fs');
-const database = require('./database');
-const entityApi = require('./entityApi');
-const initializeEntityApis = entityApi.initializeEntityApis;
+const mongoose = require('mongoose')
 
 const conf = {};
 
@@ -14,11 +11,10 @@ try {
         throw 'No server host specified';
     if (!env.DATABASE_HOSTS)
         throw 'No database hosts specified';
-    if (!env.DATABASE_DATACENTER)
-        throw 'No database datacenter specified';
-    if (!env.DATABASE_KEYSPACE)
-        throw 'No database keyspace specified';
+    if (!env.DATABASE_NAME)
+        throw 'No database name specified';
 
+    conf.mongo_uri = `mongodb://${env.DATABASE_HOSTS}/${env.DATABASE_NAME}`
     conf.address = env.SERVER_HOST.substring(0, env.SERVER_HOST.indexOf(':'));
     conf.port = env.SERVER_HOST.substring(env.SERVER_HOST.indexOf(':') + 1);
 
@@ -26,31 +22,25 @@ try {
     env.DATABASE_HOSTS.split(',').forEach(h => conf.db_hosts.push(h.trim()));
     if (conf.db_hosts.length == 0)
         throw 'No database hosts specified';
-
-    conf.db_datacenter = env.DATABASE_DATACENTER;
-    conf.db_keyspace = env.DATABASE_KEYSPACE;
 } catch (e) {
-    console.error("[ERROR] Failed to parse .env file, please make a copy of .env.example, fill it, and retry.", e);
+    console.error("[ERROR] Failed to parse .env file, please make a copy of .env, fill it, and retry.", e);
     return;
 }
 
 async function main() {
-    console.info("[INFO] Connecting to database...");
-    await database.connect(conf);
-
-    console.info("[INFO] Initializing financial entity APIs");
-    await initializeEntityApis();
+    console.info("[INFO] Connecting to mongoDB...");
+    try{
+        await mongoose.connect(conf.mongo_uri);
+    } catch(e) {
+        console.error(e)
+    }
 
     console.info("[INFO] Starting up Express server...");
     const app = express();
 
-    app.use(cors());
     app.use(express.json());
 
     app.use('/', require('./routes/test'));
-
-    app.use('/api/auth', require('./auth/auth'));
-    app.use('/api/accounts', require('./routes/accounts'));
 
     const server = app.listen(conf.port, conf.address, () => {
         console.info(`[INFO] pagAR API running at http://${conf.address}:${conf.port}/`);
@@ -61,7 +51,7 @@ async function main() {
 
         server.close(() => {
             console.info('[INFO] Closing database...');
-            database.close();
+            //database.close();
         })
     };
 
