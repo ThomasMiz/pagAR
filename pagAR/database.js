@@ -19,8 +19,8 @@ async function connect(conf) {
 
     await client_attempt.execute("CREATE KEYSPACE IF NOT EXISTS pagar WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1}");
     await client_attempt.execute("USE pagar");
-    await client_attempt.execute("CREATE TABLE IF NOT EXISTS accounts (alias TEXT PRIMARY KEY, password TEXT, cbu TEXT, first_name TEXT, last_name TEXT, date_joined TIMESTAMP);");
-    await client_attempt.execute("CREATE INDEX IF NOT EXISTS accounts_cbu_index ON accounts (cbu);");
+    await client_attempt.execute("CREATE TABLE IF NOT EXISTS users (alias TEXT PRIMARY KEY, password TEXT, cbu TEXT, first_name TEXT, last_name TEXT, date_joined TIMESTAMP);");
+    await client_attempt.execute("CREATE INDEX IF NOT EXISTS users_cbu_index ON users (cbu);");
     console.info("[INFO] Database schema created");
 
     client = client_attempt;
@@ -32,24 +32,34 @@ function close() {
     return client_old ? client_old.shutdown() : Promise.resolve();
 }
 
-async function createAccount(alias, password, cbu, firstName, lastName) {
+async function createUser(alias, password, cbu, firstName, lastName) {
     const result = await getClientOrThrow().execute(
-        "INSERT INTO accounts (alias, password, cbu, first_name, last_name, date_joined) VALUES (?, ?, ?, ?, ?, dateof(now())) IF NOT EXISTS",
+        "INSERT INTO users (alias, password, cbu, first_name, last_name, date_joined) VALUES (?, ?, ?, ?, ?, dateof(now())) IF NOT EXISTS",
         [alias, password, cbu, firstName, lastName],
         {prepare: true}
     );
 
     if (!result.wasApplied()) {
-        console.info(`[INFO] Failed to create account with alias ${alias}: already taken`);
+        console.info(`[INFO] Failed to create user with alias ${alias}: already taken`);
         throw 'Alias already taken';
     }
 
-    console.info(`[INFO] Created account with alias ${alias} and cbu ${cbu}`);
+    console.info(`[INFO] Created user with alias ${alias} and cbu ${cbu}`);
 }
 
-async function getAccountByAlias(alias) {
+async function getUsers(limit) {
     const result = await getClientOrThrow().execute(
-        "SELECT * FROM accounts WHERE alias = ?",
+        "SELECT alias, cbu, date_joined, first_name, last_name FROM users" + (limit ? " LIMIT ?;" : ";"),
+        limit ? [limit] : [],
+        {prepare: true}
+    );
+
+    return result.rows;
+}
+
+async function getUserByAlias(alias) {
+    const result = await getClientOrThrow().execute(
+        "SELECT * FROM users WHERE alias = ?",
         [alias],
         {prepare: true}
     );
@@ -64,9 +74,9 @@ async function getAccountByAlias(alias) {
     };
 }
 
-async function getAccountByCbu(cbu) {
+async function getUserByCbu(cbu) {
     const result = await getClientOrThrow().execute(
-        "SELECT * FROM accounts WHERE cbu = ?",
+        "SELECT * FROM users WHERE cbu = ?",
         [cbu],
         {prepare: true}
     );
@@ -83,6 +93,7 @@ async function getAccountByCbu(cbu) {
 
 module.exports.connect = connect;
 module.exports.close = close;
-module.exports.createAccount = createAccount;
-module.exports.getAccountByAlias = getAccountByAlias;
-module.exports.getAccountByCbu = getAccountByCbu;
+module.exports.createUser = createUser;
+module.exports.getUsers = getUsers;
+module.exports.getUserByAlias = getUserByAlias;
+module.exports.getUserByCbu = getUserByCbu;
