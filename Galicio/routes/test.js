@@ -1,4 +1,5 @@
-const router = require('express').Router()
+const router = require('express').Router();
+const Account = require('../models/Account');
 
 router.get('/', (req, res) => {
     res.send({welcome: "Buenos Días :)"});
