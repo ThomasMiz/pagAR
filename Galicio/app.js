@@ -14,6 +14,7 @@ try {
     if (!env.DATABASE_NAME)
         throw 'No database name specified';
 
+    // conf.mongo_uri = `mongodb://${env.DATABASE_HOSTS}/${env.DATABASE_NAME}?replicaSet=rs`
     conf.mongo_uri = `mongodb://${env.DATABASE_HOSTS}/${env.DATABASE_NAME}`
     conf.address = env.SERVER_HOST.substring(0, env.SERVER_HOST.indexOf(':'));
     conf.port = env.SERVER_HOST.substring(env.SERVER_HOST.indexOf(':') + 1);
@@ -40,7 +41,7 @@ async function main() {
 
     app.use(express.json());
 
-    app.use('/', require('./routes/test'));
+    app.use('/accounts', require('./routes/accounts'));
 
     const server = app.listen(conf.port, conf.address, () => {
         console.info(`[INFO] pagAR API running at http://${conf.address}:${conf.port}/`);
