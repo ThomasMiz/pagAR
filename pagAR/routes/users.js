@@ -1,8 +1,7 @@
 const router = require('express').Router();
 const entityApi = require('../entityApi');
 const database = require('../database');
-const {aliasRegex} = require('../auth/forms');
-const cbuUtils = require('../cbuUtils');
+const forms = require('./forms');
 
 router.get('/', async (req, res) => {
     limit = req.query.limit;
@@ -13,37 +12,43 @@ router.get('/', async (req, res) => {
         }
     }
 
-    let accounts = await database.getUsers(limit);
-    res.send(accounts);
+    let promises = [];
+    let users = await database.getUsers(limit);
+    users.forEach(u => {
+        promises.push((async () => {
+            const acc = await entityApi.getAccountByCbu(u.cbu);
+            u.balance = acc.balance;
+            u.active = acc.active;
+        })());
+    });
+    await Promise.all(promises);
+    res.send(users);
 });
 
 router.get('/:cbuOrAlias/', async (req, res) => {
-    let cbuOrAlias = req.params.cbuOrAlias;
-    if (!cbuOrAlias) {
+    const {error, value} = forms.cbuOrAliasForm(req.params)
+    let cbuOrAlias = value.cbuOrAlias;
+    if (error)
         return res.status(404).send({message: "Invalid CBU or alias"});
-    }
 
-    let account = undefined;
-    cbuOrAlias = cbuOrAlias.toString().toLowerCase();
+    let user = undefined;
     if (cbuOrAlias[0] >= 'a' && cbuOrAlias[0] <= 'z') {
-        if (!cbuOrAlias.match(aliasRegex))
-            return res.status(404).send({message: "Invalid alias"});
-
-        account = await database.getUserByAlias(cbuOrAlias);
-        if (!account)
+        user = await database.getUserByAlias(cbuOrAlias);
+        if (!user)
             return res.status(404).send({message: "Unknown alias"});
     } else if (cbuOrAlias[0] >= '0' && cbuOrAlias[0] <= '9') {
-        if (!cbuOrAlias.match(/^[0-9]{22}$/) || !cbuUtils.isValid(cbuOrAlias))
-            return res.status(404).send({message: "Invalid CBU"});
-
-        account = await database.getUserByCbu(cbuOrAlias);
-        if (!account)
+        user = await database.getUserByCbu(cbuOrAlias);
+        if (!user)
             return res.status(404).send({message: "Unknown CBU"});
     } else {
         return res.status(404).send({message: "Invalid CBU or alias"});
     }
 
-    res.send(account);
+    const acc = await entityApi.getAccountByCbu(user.cbu);
+    user.balance = acc.balance;
+    user.active = acc.active;
+
+    res.send(user);
 });
 
 module.exports = router;

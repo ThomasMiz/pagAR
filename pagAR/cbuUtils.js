@@ -36,8 +36,14 @@ function isValid(cbu) {
     return decompose(cbu).isOk;
 }
 
+function isCentral(cbu) {
+    const decomp = decompose(cbu);
+    return (decomp.branchNumber == 0 && decomp.accountNumber == 0);
+}
+
 module.exports.checksum1 = checksum1;
 module.exports.checksum2 = checksum2;
 module.exports.fromRaw = fromRaw;
 module.exports.decompose = decompose;
 module.exports.isValid = isValid;
+module.exports.isCentral = isCentral;
