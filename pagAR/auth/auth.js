@@ -7,12 +7,12 @@ const database = require('../database');
 const entityApi = require('../entityApi')
 
 router.post('/register', async (req, res) => {
-    const {error} = forms.registerForm(req.body);
+    const {error, value} = forms.registerForm(req.body);
     if (error)
         return res.status(400).send(error.details);
 
     // Verify CBU exists and belongs to an active account, or create account if no CBU was specified.
-    let cbu = req.body.cbu;
+    let cbu = value.cbu;
     if (cbu) {
         try {
             const existingUser = await database.getUserByCbu(cbu);
@@ -39,20 +39,20 @@ router.post('/register', async (req, res) => {
     }
 
 
-    const hash = bcrypt.hashSync(req.body.password, bcrypt.genSaltSync(10));
+    const hash = bcrypt.hashSync(value.password, bcrypt.genSaltSync(10));
 
     try {
-        await database.createUser(req.body.alias, hash, cbu, req.body.firstName, req.body.lastName);
+        await database.createUser(value.alias, hash, cbu, value.firstName, value.lastName);
     } catch (e) {
         return res.status(409).send({message: "Alias already taken"});
     }
 
     try {
         return res.status(201).send({
-            alias: req.body.alias,
+            alias: value.alias,
             cbu: cbu,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName
+            firstName: value.firstName,
+            lastName: value.lastName
         });
     } catch (error) {
         return res.status(500).send({message: error});
@@ -60,12 +60,12 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-    const {error} = forms.loginForm(req.body);
+    const {error, value} = forms.loginForm(req.body);
     if (error)
         return res.status(400).send(error.details);
 
-    const user = await database.getUserByAlias(req.body.alias);
-    if (!user || !bcrypt.compareSync(req.body.password, user.password))
+    const user = await database.getUserByAlias(value.alias);
+    if (!user || !bcrypt.compareSync(value.password, user.password))
         return res.status(400).send("Invalid alias or password");
 
     const token = jwt.sign({alias: user.alias}, jwtSecret);

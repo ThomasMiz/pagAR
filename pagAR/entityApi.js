@@ -73,6 +73,25 @@ class EntityApi {
 const entityApis = new Map();
 let allEntityNumbers = []
 
+function mapTransaction(tx) {
+    let src = tx.source;
+    let dst = tx.destination;
+    if (cbuUtils.isCentral(src)) {
+        src = tx.tag;
+    } else if (cbuUtils.isCentral(dst)) {
+        dst = tx.tag;
+    }
+
+    return {
+        id: tx.id.toString() + cbuUtils.decompose(src).entityNumber.toString().padStart(3, '0'),
+        source: src,
+        destination: dst,
+        amount: tx.amount,
+        date: tx.date,
+        motive: tx.motive
+    };
+}
+
 function getApiForEntityOrThrow(entityNumber) {
     const apiInstance = entityApis.get(entityNumber);
     if (apiInstance) {
@@ -117,7 +136,11 @@ async function deleteAccountByCbu(cbu) {
 
 async function getTransactionsInvolving(pageNumber, pageSize, involvingCbu, start, end) {
     const response = await getApiForCbuOrThrow(involvingCbu).getTransactions(pageNumber, pageSize, null, null, involvingCbu, start, end);
-    return response.data;
+
+    const data = [];
+    response.data.forEach(tx => data.push(mapTransaction(tx)));
+
+    return data;
 }
 
 async function createTransaction(sourceCbu, destinationCbu, amount, motive) {
@@ -135,12 +158,14 @@ async function createTransaction(sourceCbu, destinationCbu, amount, motive) {
     const sourceTx = await sourceApi.createTransaction(sourceCbu, sourceApi.centralCbu, amount, motive, destinationCbu);
     const destTx = await destApi.createTransaction(destApi.centralCbu, destinationCbu, amount, motive, sourceCbu);
 
-    return sourceTx.data;
+    return mapTransaction(sourceTx.data);
 }
 
-async function getTransactionById(entityNumber, id) {
-    const response = await getApiForEntityOrThrow(entityNumber).getTransactionById(id);
-    return response.data;
+async function getTransactionById(id) {
+    id = id.toString();
+    const entityNumber = id.substring(id.length - 3);
+    const response = await getApiForEntityOrThrow(entityNumber).getTransactionById(id.substring(0, id.length - 3));
+    return mapTransaction(response.data);
 }
 
 async function initializeEntityApis() {
