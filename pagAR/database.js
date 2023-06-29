@@ -47,6 +47,16 @@ async function createUser(alias, password, cbu, firstName, lastName) {
     console.info(`[INFO] Created user with alias ${alias} and cbu ${cbu}`);
 }
 
+async function getUsers(limit) {
+    const result = await getClientOrThrow().execute(
+        "SELECT alias, cbu, date_joined, first_name, last_name FROM users" + (limit ? " LIMIT ?;" : ";"),
+        limit ? [limit] : [],
+        {prepare: true}
+    );
+
+    return result.rows;
+}
+
 async function getUserByAlias(alias) {
     const result = await getClientOrThrow().execute(
         "SELECT * FROM users WHERE alias = ?",
@@ -84,5 +94,6 @@ async function getUserByCbu(cbu) {
 module.exports.connect = connect;
 module.exports.close = close;
 module.exports.createUser = createUser;
+module.exports.getUsers = getUsers;
 module.exports.getUserByAlias = getUserByAlias;
 module.exports.getUserByCbu = getUserByCbu;

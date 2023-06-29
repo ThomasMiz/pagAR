@@ -50,7 +50,7 @@ async function main() {
     app.use('/', require('./routes/test'));
 
     app.use('/api/auth', require('./auth/auth'));
-    app.use('/api/accounts', require('./routes/accounts'));
+    app.use('/api/users', require('./routes/users'));
 
     const server = app.listen(conf.port, conf.address, () => {
         console.info(`[INFO] pagAR API running at http://${conf.address}:${conf.port}/`);
