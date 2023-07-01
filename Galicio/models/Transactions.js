@@ -40,7 +40,8 @@ const TransactionSchema = new Schema({
     }
 });
 
-TransactionSchema.query.where_source_cbu = function (cbu) {
+TransactionSchema.query.validateCbuGetAccount = function (cbu) {
+
     const decomposedData = cbuUtils.decompose(cbu);
     if (!decomposedData.isOk) {
         throw new Error('Invalid verification digits');
@@ -48,8 +49,6 @@ TransactionSchema.query.where_source_cbu = function (cbu) {
     if (decomposedData.entityNumber !== CBU_ENTITY_NUMBER) {
         throw new Error('Transaction does not exist');
     }
-    const cbu_raw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000;
-    return this.where({ source_cbu_raw: cbu_raw });
 };
 
 TransactionSchema.query.where_destination_cbu = function (cbu) {

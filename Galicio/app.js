@@ -45,6 +45,7 @@ async function main() {
     app.use(express.json());
 
     app.use('/api/accounts', require('./routes/accounts'));
+    app.use('/api/transactions', require('./routes/transactions'));
 
     const server = app.listen(conf.port, conf.address, () => {
         console.info(`[INFO] pagAR API running at http://${conf.address}:${conf.port}/`);

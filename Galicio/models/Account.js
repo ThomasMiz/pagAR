@@ -4,6 +4,7 @@ const cbuUtils = require('../cbuUtils')
 const Schema = mongoose.Schema
 
 let current_raw_cbu = 1
+const CBU_ENTITY_NUMBER = 2;
 
 const AccountSchema = new Schema({
     cbu_raw: {
@@ -50,6 +51,8 @@ AccountSchema.query.whereActive = function() {
 }
 
 AccountSchema.query.getByCbu = function(cbu) {
+
+    console.log("holis")
     const decomposedData = cbuUtils.decompose(cbu);
     if (!decomposedData.isOk){
         throw new Error('Invalid verification digits')
