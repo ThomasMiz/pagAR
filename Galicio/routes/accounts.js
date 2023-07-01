@@ -4,22 +4,46 @@ const Account = require('../models/Account');
 const mongoose = require("mongoose");
 
 router.get('/', async (req, res) => {
+
     try {
         const account = await Account.find().whereActive().exec()
-        console.log(account[4].cbu)
-        res.status(200).json(account)
+        const resAccount = []
+
+        account.forEach(d => resAccount.push({
+            balance: d.balance,
+            active: d.is_active,
+            cbu: d.cbu
+        }))
+        res.status(200).json(resAccount)
     }catch (e) {
         res.status(400).json({error: e.message})
     }
 });
 
 router.post('/', async (req, res) => {
+    const {is_central} = req.body;
+    let account = null;
 
     try {
-        const account =  await Account.create({})
-        res.status(200).json(account)
+        if(is_central) {
+            if(await Account.find().getCentral()){
+                return res.status(409).json({error: "Central already exists"});
+            } else {
+                account =  await Account.create({cbu_raw: 0});
+            }
+        } else {
+            account = await Account.create({});
+        }
+
+        const resAccount = {
+            cbu: account.cbu,
+            balance: account.balance,
+            active: account.is_active
+        }
+
+        res.status(200).json(resAccount);
     } catch (e) {
-        res.status(400).json({error: e.message})
+        res.status(400).json({error: e.message});
     }
 });
 
@@ -64,6 +88,8 @@ router.delete('/:cbu', async (req, res) => {
 router.put('/:cbu', async (req, res) => {
     const {balance} = req.body
     const cbu = req.params.cbu
+
+    //TODO: make ACID this method
 
     try {
 

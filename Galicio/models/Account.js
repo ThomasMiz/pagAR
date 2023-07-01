@@ -2,8 +2,8 @@ const mongoose = require('mongoose')
 const cbuUtils = require('../cbuUtils')
 
 const Schema = mongoose.Schema
-const CBU_ENTITY_NUMBER = 2;
-let current_raw_cbu = 0
+
+let current_raw_cbu = 1
 
 const AccountSchema = new Schema({
     cbu_raw: {
@@ -23,7 +23,7 @@ const AccountSchema = new Schema({
 });
 
 AccountSchema.pre('save', async function (next) {
-    if (this.isNew) {
+    if (this.isNew && this.get('cbu_raw') !== 0) {
         const latestAccount = await this.constructor.findOne({}, {}, {sort: {cbu_raw: -1}});
         if (latestAccount) {
             current_raw_cbu = latestAccount.cbu_raw + 1;

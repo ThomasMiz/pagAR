@@ -29,6 +29,7 @@ try {
 }
 
 async function main() {
+
     console.info("[INFO] Connecting to mongoDB...");
     try{
         await mongoose.connect(conf.mongo_uri);
@@ -39,9 +40,11 @@ async function main() {
     console.info("[INFO] Starting up Express server...");
     const app = express();
 
+    app.use(express.static('static'));
+
     app.use(express.json());
 
-    app.use('/accounts', require('./routes/accounts'));
+    app.use('/api/accounts', require('./routes/accounts'));
 
     const server = app.listen(conf.port, conf.address, () => {
         console.info(`[INFO] pagAR API running at http://${conf.address}:${conf.port}/`);

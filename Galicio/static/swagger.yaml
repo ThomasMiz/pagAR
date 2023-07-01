@@ -1,0 +1,275 @@
+openapi: 3.0.3
+info:
+  title: API de Entidad Bancaria
+  version: 1.0.0
+  description: Las entidades bancarias en el sistema pagAR exponen un API de este estilo.
+servers:
+  - url: http://localhost:8080
+    description: Servidor Express corriendo localmente
+paths:
+  /api/accounts:
+    get:
+      operationId: api_accounts_retrieve
+      description: Lists all active accounts.
+      tags:
+      - api
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          required: false
+          description: Page number, starting at 1
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 15
+          required: false
+          description: Page size
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+          description: ''
+    post:
+      operationId: api_accounts_create
+      description: Creates a new account. If central=true is specified, attempts
+        to create a central account (with a CBU where all non-verification digits
+        are 0) if it doesn't already exist.
+      tags:
+      - api
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountForm'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+  /api/accounts/{cbu}:
+    get:
+      operationId: api_accounts_retrieve_2
+      description: Gets an account by  CBU.
+      parameters:
+      - in: path
+        name: cbu
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+          description: ''
+    put:
+      operationId: api_accounts_update
+      description: Updates an account's balance
+      parameters:
+      - in: path
+        name: cbu
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountBalance'
+      responses:
+        '200':
+          description: No response body
+    delete:
+      operationId: api_accounts_destroy
+      description: Creates a new account. If ?central=true is specified, attempts
+        to create a central account (with a CBU where all non-verification digits
+        are 0) if it doesn't already exist.
+      parameters:
+      - in: path
+        name: cbu
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      responses:
+        '204':
+          description: No response body
+  /api/transactions:
+    get:
+      operationId: api_transactions_retrieve
+      description: Lists all transactions.
+      tags:
+      - api
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          required: false
+          description: Page number, starting at 1
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 15
+          required: false
+          description: Page size
+        - in: query
+          name: start
+          schema:
+            type: string
+            format: decimal
+            pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$
+          required: false
+          description: Minimum date inclusive in ISO format ("YYYY-MM-DDThh:mm:ss.mmmmZ")
+        - in: query
+          name: end
+          schema:
+            type: string
+            format: decimal
+            pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$
+          required: false
+          description: Maximum date inclusive in ISO format ("YYYY-MM-DDThh:mm:ss.mmmmZ")
+        - in: query
+          name: source
+          schema:
+            type: string
+          required: false
+          description: The CBU of the sender
+        - in: query
+          name: destination
+          schema:
+            type: string
+          required: false
+          description: The CBU of the recipient
+        - in: query
+          name: involving
+          schema:
+            type: string
+          required: false
+          description: The CBU of the sender or recipient. Not compatible with source and destination.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+          description: ''
+    post:
+      operationId: api_transactions_create
+      description: Creates a new transaction.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+  /api/transactions/{id}:
+    get:
+      operationId: api_transactions_retrieve_2
+      description: Gets a transaction by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+components:
+  schemas:
+    CreateAccountForm:
+      type: object
+      properties:
+        central:
+          type: boolean
+          default: false
+    AccountBalance:
+      type: object
+      properties:
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,22}(?:\.\d{0,2})?$
+      required:
+      - balance
+    Account:
+      type: object
+      properties:
+        cbu:
+          type: string
+          readOnly: true
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,22}(?:\.\d{0,2})?$
+        active:
+          type: boolean
+      required:
+      - cbu
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        source:
+          type: string
+        destination:
+          type: string
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,22}(?:\.\d{0,2})?$
+        date:
+          type: string
+          format: date-time
+          readOnly: true
+        motive:
+          type: string
+          nullable: true
+          maxLength: 200
+        tag:
+          type: string
+          nullable: true
+          maxLength: 32
+      required:
+      - date
+      - destination
+      - id
+      - source
