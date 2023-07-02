@@ -1,19 +1,18 @@
 const cbuUtils = require("../cbuUtils")
+const dotenv = require('dotenv');
 const Account = require("../models/Account")
 
-async function validateCbuGetAccount(cbu) {
+async function validateCbuAccount(cbu, isSource) {
     const {entityNumber, isOk} = cbuUtils.decompose(cbu)
 
     if (!isOk) {
         throw new Error("CBU Checksum doesn't match")
     }
 
-    //todo: check entity number, but before do that put entity_number in a constants file
+    const account = await Account.find().getByCbu(cbu).exec()
 
-    const account = await Account.find().getByCbu().exec()
-
-    if(!account.is_active){
-        throw new Error("CBU does not exist locally")
+    if(!isSource && !account.is_active){
+        throw new Error("Can not transfer money to a deleted account")
     }
 
     return account
@@ -40,4 +39,4 @@ function validateTransactionAmount(amount){
 }
 
 module.exports.validateTransactionAmount = validateTransactionAmount;
-module.exports.validateCbuGetAccount = validateCbuGetAccount;
+module.exports.validateCbuAccount = validateCbuAccount;

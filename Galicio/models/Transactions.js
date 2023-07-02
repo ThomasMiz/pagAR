@@ -40,29 +40,6 @@ const TransactionSchema = new Schema({
     }
 });
 
-TransactionSchema.query.validateCbuGetAccount = function (cbu) {
-
-    const decomposedData = cbuUtils.decompose(cbu);
-    if (!decomposedData.isOk) {
-        throw new Error('Invalid verification digits');
-    }
-    if (decomposedData.entityNumber !== CBU_ENTITY_NUMBER) {
-        throw new Error('Transaction does not exist');
-    }
-};
-
-TransactionSchema.query.where_destination_cbu = function (cbu) {
-    const decomposedData = cbuUtils.decompose(cbu);
-    if (!decomposedData.isOk) {
-        throw new Error('Invalid verification digits');
-    }
-    if (decomposedData.entityNumber !== CBU_ENTITY_NUMBER) {
-        throw new Error('Transaction does not exist');
-    }
-    const cbu_raw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000;
-    return this.where({ destination_cbu_raw: cbu_raw });
-};
-
 TransactionSchema.query.involving_cbu = function (cbu) {
     const decomposedData = cbuUtils.decompose(cbu);
     if (!decomposedData.isOk) {
@@ -72,7 +49,7 @@ TransactionSchema.query.involving_cbu = function (cbu) {
         throw new Error('Transaction does not exist');
     }
     const cbu_raw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000;
-    return this.where({ $or: [{ source_cbu_raw: cbu_raw }, { destination_cbu_raw: cbu_raw }] });
+    return this.where({ $or: [{ source: cbu_raw }, { destination: cbu_raw }] });
 };
 
 module.exports = mongoose.model('Transaction', TransactionSchema);

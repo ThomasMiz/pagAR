@@ -21,15 +21,15 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-    const {is_central} = req.body;
+    const {central} = req.body;
     let account = null;
 
     try {
-        if(is_central) {
+        if(central) {
             if(await Account.find().getCentral()){
                 return res.status(409).json({error: "Central already exists"});
             } else {
-                account =  await Account.create({cbu_raw: 0});
+                account =  await Account.create({_id: 0});
             }
         } else {
             account = await Account.create({});
@@ -74,7 +74,7 @@ router.delete('/:cbu', async (req, res) => {
             throw new Error("Account already deleted");
         }
 
-        const newAccount =  await Account.findOneAndUpdate({cbu_raw: account.cbu_raw}, {is_active: false}, {session, new:true});
+        const newAccount =  await Account.findOneAndUpdate({_id: account._id}, {is_active: false}, {session, new:true});
         await session.commitTransaction();
 
         res.status(200).json(newAccount)

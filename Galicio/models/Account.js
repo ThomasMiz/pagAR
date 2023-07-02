@@ -7,9 +7,8 @@ let current_raw_cbu = 1
 const CBU_ENTITY_NUMBER = 2;
 
 const AccountSchema = new Schema({
-    cbu_raw: {
+    _id: {
         type: Number,
-        unique: true,
     },
 
     balance: {
@@ -23,26 +22,27 @@ const AccountSchema = new Schema({
     }
 });
 
+//TODO: correjir esto para que sea atomico. Que pasa si se crean cuentas muy rapido
 AccountSchema.pre('save', async function (next) {
-    if (this.isNew && this.get('cbu_raw') !== 0) {
-        const latestAccount = await this.constructor.findOne({}, {}, {sort: {cbu_raw: -1}});
+    if (this.isNew && this.get('_id') !== 0) {
+        const latestAccount = await this.constructor.findOne({}, {}, {sort: {_id: -1}});
         if (latestAccount) {
-            current_raw_cbu = latestAccount.cbu_raw + 1;
+            current_raw_cbu = latestAccount._id + 1;
         }
-        this.cbu_raw = current_raw_cbu
+        this._id = current_raw_cbu
     }
     next();
 });
 
 // Properties
 AccountSchema.virtual('cbu').get(function() {
-    const branch_number = Math.floor(this.cbu_raw / 10000000000000);
-    const account_number = this.cbu_raw % 10000000000000;
+    const branch_number = Math.floor(this._id / 10000000000000);
+    const account_number = this._id % 10000000000000;
     return cbuUtils.fromRaw(CBU_ENTITY_NUMBER, branch_number, account_number);
 });
 
 AccountSchema.virtual('is_central').get(function() {
-    return this.cbu_raw === 0;
+    return this._id === 0;
 });
 
 // QuerySets
@@ -52,7 +52,6 @@ AccountSchema.query.whereActive = function() {
 
 AccountSchema.query.getByCbu = function(cbu) {
 
-    console.log("holis")
     const decomposedData = cbuUtils.decompose(cbu);
     if (!decomposedData.isOk){
         throw new Error('Invalid verification digits')
@@ -62,11 +61,11 @@ AccountSchema.query.getByCbu = function(cbu) {
     }
 
     const cbu_raw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000;
-    return this.where({cbu_raw}).findOne();
+    return this.where({_id: cbu_raw}).findOne();
 }
 
 AccountSchema.query.getCentral = function() {
-    return this.where({ cbu_raw: 0 }).findOne();
+    return this.where({ _id: 0 }).findOne();
 }
 
 module.exports = mongoose.model('Account', AccountSchema);
