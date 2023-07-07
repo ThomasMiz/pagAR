@@ -107,8 +107,7 @@ router.put('/:cbu', async (req, res) => {
             throw new Error("Account already deleted");
         }
 
-        const newAccount =  await Account.findOneAndUpdate({cbu_raw: account.cbu_raw}, {balance: balance});
-        res.status(200).json(newAccount)
+        const newAccount =  await Account.findOneAndUpdate({_id: account._id}, {balance: parseInt(balance)});
     } catch (e){
         res.status(400).json({error: e.message})
     }

@@ -28,17 +28,16 @@ router.post('/', async (req, res) => {
 
         validators.validateTransactionAmount(amount)
         const sourceAccount = await validators.validateCbuAccount(source)
-        const destinationAccount = await validators.validateCbuAccount(source)
+        const destinationAccount = await validators.validateCbuAccount(destination)
 
         if(amount > sourceAccount.balance){
             throw new Error("Insufficient Balance")
         }
 
-        await Account.findOneAndUpdate({cbu_raw: sourceAccount.cbu_raw}, {balance: parseInt(sourceAccount.balance) - parseInt(amount)});
-        await Account.findOneAndUpdate({cbu_raw: destinationAccount.cbu_raw}, {balance: parseInt(destinationAccount.balance) + parseInt(amount)});
+        await Account.findOneAndUpdate({_id: sourceAccount._id}, {balance: parseInt(sourceAccount.balance) - parseInt(amount)});
+        await Account.findOneAndUpdate({_id: destinationAccount._id}, {balance: parseInt(destinationAccount.balance) + parseInt(amount)});
 
-        //TODO: Fix bug balances in accounts after transaction
-        const account =  await Transaction.create({
+        const transaction =  await Transaction.create({
             source: sourceAccount,
             destination: destinationAccount,
             amount: amount,
@@ -47,7 +46,15 @@ router.post('/', async (req, res) => {
             tag: tag,
         });
 
-        res.status(200).json(account)
+        res.status(200).json({
+            id: transaction._id,
+            source: sourceAccount.cbu,
+            destination: destinationAccount.cbu,
+            amount: transaction.amount,
+            date: transaction.date,
+            motive: transaction.motive,
+            tag: transaction.tag,
+        })
 
     } catch (e) {
         res.status(400).json({error: e.message})
