@@ -3,6 +3,8 @@ const router = express.Router();
 const Transaction = require("../models/Transactions")
 const validators = require("../validators/validators")
 const Account = require("../models/Account");
+const cbuUtils = require('../cbuUtils');
+const BigDecimal = require("../bigdecimal");
 
 router.get('/', async (req, res) => {
     try {
@@ -40,30 +42,30 @@ router.post('/', async (req, res) => {
             throw new Error("Parameter \"amount\" missing")
         }
 
-        if(source === destination)
+        if (source === destination) {
             throw new Error("Transactions must be between different accounts")
-
-        validators.validateTransactionAmount(amount)
-        const sourceAccount = await validators.validateCbuAccount(source)
-        const destinationAccount = await validators.validateCbuAccount(destination)
-
-        if(amount > sourceAccount.balance){
-            throw new Error("Insufficient Balance")
         }
 
-        await Account.findOneAndUpdate({_id: sourceAccount._id}, {balance: parseInt(sourceAccount.balance) - parseInt(amount)});
-        await Account.findOneAndUpdate({_id: destinationAccount._id}, {balance: parseInt(destinationAccount.balance) + parseInt(amount)});
+        const amountd = validators.validateTransactionAmount(amount);
+        const sourceAccount = await validators.validateCbuAccount(source, true, amountd);
+        const destinationAccount = await validators.validateCbuAccount(destination, false, amountd);
+
+        const sourceBalance = new BigDecimal(sourceAccount.balance.toString());
+        const destinationBalance = new BigDecimal(destinationAccount.balance.toString());
+
+        await Account.findOneAndUpdate({_id: sourceAccount._id}, {balance: (sourceBalance.subtract(amountd)).toString()});
+        await Account.findOneAndUpdate({_id: destinationAccount._id}, {balance: (destinationBalance.add(amountd)).toString()});
 
         const transaction =  await Transaction.create({
             source: sourceAccount,
             destination: destinationAccount,
-            amount: amount,
+            amount: amountd.toString(),
             date: new Date(),
             motive: motive,
             tag: tag,
         });
 
-        res.status(200).json({
+        res.status(201).json({
             id: transaction._id,
             source: sourceAccount.cbu,
             destination: destinationAccount.cbu,
@@ -71,22 +73,21 @@ router.post('/', async (req, res) => {
             date: transaction.date,
             motive: transaction.motive,
             tag: transaction.tag,
-        })
+        });
 
     } catch (e) {
         res.status(400).json({error: e.message})
     }
 })
 
-router.get('/:cbu', async (req, res) => {
-
-    const cbu = req.params.cbu
+router.get('/:id', async (req, res) => {
+    const id = req.params.id;
 
     try {
-        const transaction = await Transaction.find().involvingCbu(cbu).exec()
-        res.status(200).json(transaction)
+        const transaction = await Transaction.find({"_id": id});
+        res.status(200).json(transaction);
     }catch (e) {
-        res.status(400).json({error: e.message})
+        res.status(500).json({error: e.message});
     }
 })
 

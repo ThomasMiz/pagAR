@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: Las entidades bancarias en el sistema pagAR exponen un API de este estilo.
 servers:
-  - url: http://localhost:8000
-    description: Servidor Django corriendo localmente
+  - url: http://localhost:8080
+    description: Servidor Express corriendo localmente
 paths:
   /api/accounts:
     get:
@@ -51,7 +51,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateAccountForm'
       responses:
-        '200':
+        '201':
           content:
             application/json:
               schema:
@@ -93,7 +93,7 @@ paths:
             schema:
               $ref: '#/components/schemas/AccountBalance'
       responses:
-        '200':
+        '204':
           description: No response body
     delete:
       operationId: api_accounts_destroy
@@ -186,7 +186,7 @@ paths:
             schema:
               $ref: '#/components/schemas/Transaction'
       responses:
-        '200':
+        '201':
           content:
             application/json:
               schema:

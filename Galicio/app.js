@@ -48,7 +48,7 @@ async function main() {
     app.use('/api/transactions', require('./routes/transactions'));
 
     const server = app.listen(conf.port, conf.address, () => {
-        console.info(`[INFO] pagAR API running at http://${conf.address}:${conf.port}/`);
+        console.info(`[INFO] Galicio API running at http://${conf.address}:${conf.port}/`);
     });
 
     const sig_handler = () => {
@@ -56,7 +56,7 @@ async function main() {
 
         server.close(() => {
             console.info('[INFO] Closing database...');
-            //database.close();
+            mongoose.connection.close();
         })
     };
 
