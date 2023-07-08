@@ -4,7 +4,24 @@ const Transaction = require("../models/Transactions")
 const validators = require("../validators/validators")
 const Account = require("../models/Account");
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
+    try {
+        const account = await Transaction.find()
+        const resTransaction = []
+
+        account.forEach(d => resTransaction.push({
+            source: d.source,
+            destination: d.destination,
+            amount: d.amount,
+            date: d.date,
+            motive: d.motive,
+            tag: d.tag
+        }))
+
+        res.status(200).json(resTransaction)
+    } catch (e) {
+        res.status(400).json({error: e.message})
+    }
 })
 
 router.post('/', async (req, res) => {
@@ -61,8 +78,16 @@ router.post('/', async (req, res) => {
     }
 })
 
-router.get('/:id', (req, res) => {
+router.get('/:cbu', async (req, res) => {
 
+    const cbu = req.params.cbu
+
+    try {
+        const transaction = await Transaction.find().involvingCbu(cbu).exec()
+        res.status(200).json(transaction)
+    }catch (e) {
+        res.status(400).json({error: e.message})
+    }
 })
 
 module.exports = router;
