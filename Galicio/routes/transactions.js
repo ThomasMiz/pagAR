@@ -5,15 +5,17 @@ const validators = require("../validators/validators")
 const Account = require("../models/Account");
 const cbuUtils = require('../cbuUtils');
 const BigDecimal = require("../bigdecimal");
+const {CBU_ENTITY_NUMBER} = require('../constants');
 
 router.get('/', async (req, res) => {
     try {
-        const account = await Transaction.find()
-        const resTransaction = []
+        const txList = await Transaction.find();
+        const resTransaction = [];
 
-        account.forEach(d => resTransaction.push({
-            source: d.source,
-            destination: d.destination,
+        txList.forEach(d => resTransaction.push({
+            id: d._id,
+            source: cbuUtils.fromRaw(CBU_ENTITY_NUMBER, BigInt(d.source) / 10000000000000n, BigInt(d.source) % 10000000000000n),
+            destination: cbuUtils.fromRaw(CBU_ENTITY_NUMBER, BigInt(d.destination) / 10000000000000n, BigInt(d.destination) % 10000000000000n),
             amount: d.amount,
             date: d.date,
             motive: d.motive,
@@ -84,8 +86,17 @@ router.get('/:id', async (req, res) => {
     const id = req.params.id;
 
     try {
-        const transaction = await Transaction.find({"_id": id});
-        res.status(200).json(transaction);
+        const transaction = await Transaction.findOne({"_id": id});
+
+        res.status(200).json({
+            id: transaction._id,
+            source: cbuUtils.fromRaw(CBU_ENTITY_NUMBER, BigInt(transaction.source) / 10000000000000n, BigInt(transaction.source) % 10000000000000n),
+            destination: cbuUtils.fromRaw(CBU_ENTITY_NUMBER, BigInt(transaction.destination) / 10000000000000n, BigInt(transaction.destination) % 10000000000000n),
+            amount: transaction.amount,
+            date: transaction.date,
+            motive: transaction.motive,
+            tag: transaction.tag,
+        });
     }catch (e) {
         res.status(500).json({error: e.message});
     }

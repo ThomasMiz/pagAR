@@ -1,19 +1,19 @@
 function checksum1(entityNumber, branchNumber) {
     entityNumber = entityNumber.toString().padStart(3, '0');
     branchNumber = branchNumber.toString().padStart(4, '0');
-    let sum1 = parseInt(entityNumber[0]) * 7 + parseInt(entityNumber[1]) + parseInt(entityNumber[2]) * 3;
-    sum1 += parseInt(branchNumber[0]) * 9 + parseInt(branchNumber[1]) * 7 + parseInt(branchNumber[2]) * 1 + parseInt(branchNumber[3]) * 3;
-    return (10 - (sum1 % 10)) % 10;
+    let sum1 = BigInt(entityNumber[0]) * 7n + BigInt(entityNumber[1]) + BigInt(entityNumber[2]) * 3n;
+    sum1 += BigInt(branchNumber[0]) * 9n + BigInt(branchNumber[1]) * 7n + BigInt(branchNumber[2]) * 1n + BigInt(branchNumber[3]) * 3n;
+    return (10n - (sum1 % 10n)) % 10n;
 }
 
 function checksum2(accountNumber) {
     accountNumber = accountNumber.toString().padStart(13, '0');
-    let sum1 = parseInt(accountNumber[0]) * 3 + parseInt(accountNumber[1]) * 9 + parseInt(accountNumber[2]) * 7;
-    sum1 += parseInt(accountNumber[3]) * 1 + parseInt(accountNumber[4]) * 3 + parseInt(accountNumber[5]) * 9;
-    sum1 += parseInt(accountNumber[6]) * 7 + parseInt(accountNumber[7]) * 1 + parseInt(accountNumber[8]) * 3;
-    sum1 += parseInt(accountNumber[9]) * 9 + parseInt(accountNumber[10]) * 7 + parseInt(accountNumber[11]) * 1;
-    sum1 += parseInt(accountNumber[12]) * 3;
-    return (10 - (sum1 % 10)) % 10;
+    let sum1 = BigInt(accountNumber[0]) * 3n + BigInt(accountNumber[1]) * 9n + BigInt(accountNumber[2]) * 7n;
+    sum1 += BigInt(accountNumber[3]) * 1n + BigInt(accountNumber[4]) * 3n + BigInt(accountNumber[5]) * 9n;
+    sum1 += BigInt(accountNumber[6]) * 7n + BigInt(accountNumber[7]) * 1n + BigInt(accountNumber[8]) * 3n;
+    sum1 += BigInt(accountNumber[9]) * 9n + BigInt(accountNumber[10]) * 7n + BigInt(accountNumber[11]) * 1n;
+    sum1 += BigInt(accountNumber[12]) * 3n;
+    return (10n - (sum1 % 10n)) % 10n;
 }
 
 
@@ -25,10 +25,10 @@ function fromRaw(entityNumber, branchNumber, accountNumber) {
 /** Decomposes a CBU and returns its entityNumber, branchNumber, accountNumber, isOk */
 function decompose(cbu) {
     cbu = cbu.toString().padStart(22, '0');
-    const entityNumber = parseInt(cbu.substring(0, 3));
-    const branchNumber = parseInt(cbu.substring(3, 7));
-    const accountNumber = parseInt(cbu.substring(8, 21));
-    const isOk = parseInt(cbu[7]) == checksum1(entityNumber, branchNumber) && parseInt(cbu[21]) == checksum2(accountNumber)
+    const entityNumber = BigInt(cbu.substring(0, 3));
+    const branchNumber = BigInt(cbu.substring(3, 7));
+    const accountNumber = BigInt(cbu.substring(8, 21));
+    const isOk = BigInt(cbu[7]) == checksum1(entityNumber, branchNumber) && BigInt(cbu[21]) == checksum2(accountNumber)
     return {"entityNumber": entityNumber, "branchNumber": branchNumber, "accountNumber": accountNumber, "isOk": isOk};
 }
 

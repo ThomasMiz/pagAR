@@ -1,22 +1,20 @@
 const mongoose = require('mongoose')
 const cbuUtils = require('../cbuUtils')
+const {CBU_ENTITY_NUMBER} = require('../constants');
 
-const Schema = mongoose.Schema
-
-let current_raw_cbu = 1
-const CBU_ENTITY_NUMBER = 2;
+const Schema = mongoose.Schema;
 
 const AccountSchema = new Schema({
     _id: {
-        type: Number,
+        type: String,
     },
 
     balance: {
-        type: Number,
-        default: 0.0
+        type: String,
+        default: "0"
     },
 
-    is_active: {
+    active: {
         type: Boolean,
         default: true
     }
@@ -24,48 +22,46 @@ const AccountSchema = new Schema({
 
 //TODO: correjir esto para que sea atomico. Que pasa si se crean cuentas muy rapido
 AccountSchema.pre('save', async function (next) {
-    if (this.isNew && this.get('_id') !== 0) {
+    if (this.isNew && this.get('_id') != 0) {
         const latestAccount = await this.constructor.findOne({}, {}, {sort: {_id: -1}});
-        if (latestAccount) {
-            current_raw_cbu = latestAccount._id + 1;
-        }
-        this._id = current_raw_cbu
+        const nextId = latestAccount ? (BigInt(latestAccount._id) + 1n) : "1";
+        this._id = nextId.toString();
     }
     next();
 });
 
 // Properties
 AccountSchema.virtual('cbu').get(function() {
-    const branch_number = Math.floor(this._id / 10000000000000);
-    const account_number = this._id % 10000000000000;
-    return cbuUtils.fromRaw(CBU_ENTITY_NUMBER, branch_number, account_number);
+    const branchNumber = BigInt(this._id) / 10000000000000n;
+    const accountNumber = BigInt(this._id) % 10000000000000n;
+    return cbuUtils.fromRaw(CBU_ENTITY_NUMBER, branchNumber, accountNumber);
 });
 
-AccountSchema.virtual('is_central').get(function() {
-    return this._id === 0;
+AccountSchema.virtual('isCentral').get(function() {
+    return this._id == "0";
 });
 
 // QuerySets
 AccountSchema.query.whereActive = function() {
-    return this.where({ is_active: true });
+    return this.where({ active: true });
 }
 
 AccountSchema.query.getByCbu = function(cbu) {
-
     const decomposedData = cbuUtils.decompose(cbu);
-    if (!decomposedData.isOk){
+    if (!decomposedData.isOk) {
         throw new Error('Invalid verification digits')
     }
-    if(decomposedData.entityNumber !== CBU_ENTITY_NUMBER){
+
+    if (decomposedData.entityNumber != CBU_ENTITY_NUMBER) {
         throw new Error('Account does not exist');
     }
 
-    const cbu_raw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000;
-    return this.where({_id: cbu_raw}).findOne();
+    const cbuRaw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000n;
+    return this.where({_id: cbuRaw.toString()}).findOne();
 }
 
 AccountSchema.query.getCentral = function() {
-    return this.where({ _id: 0 }).findOne();
+    return this.where({ _id: "0" }).findOne();
 }
 
 module.exports = mongoose.model('Account', AccountSchema);

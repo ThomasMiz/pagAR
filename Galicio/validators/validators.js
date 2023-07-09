@@ -22,7 +22,7 @@ async function validateCbuAccount(cbu, isSource, amountd) {
             throw new Error("Insufficient Balance");
         }
     } else {
-        if (!account.is_active) {
+        if (!account.active) {
             throw new Error("Cannot transfer money to a deleted account");
         }
     }

@@ -1,0 +1,3 @@
+const CBU_ENTITY_NUMBER = 2;
+
+module.exports.CBU_ENTITY_NUMBER = CBU_ENTITY_NUMBER;

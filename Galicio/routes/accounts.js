@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router();
 const Account = require('../models/Account');
 const mongoose = require("mongoose");
+const BigDecimal = require('../bigdecimal');
 
 router.get('/', async (req, res) => {
     try {
@@ -11,7 +12,7 @@ router.get('/', async (req, res) => {
         account.forEach(d => resAccount.push({
             cbu: d.cbu,
             balance: d.balance,
-            active: d.is_active
+            active: d.active
         }))
         res.status(200).json(resAccount)
     }catch (e) {
@@ -24,11 +25,11 @@ router.post('/', async (req, res) => {
     let account = null;
 
     try {
-        if(central) {
-            if(await Account.find().getCentral()){
+        if (central) {
+            if (await Account.find().getCentral()) {
                 return res.status(409).json({error: "Central already exists"});
             } else {
-                account =  await Account.create({_id: 0});
+                account =  await Account.create({_id: "0"});
             }
         } else {
             account = await Account.create({});
@@ -37,7 +38,7 @@ router.post('/', async (req, res) => {
         const resAccount = {
             cbu: account.cbu,
             balance: account.balance.toString(),
-            active: account.is_active
+            active: account.active
         }
 
         res.status(201).json(resAccount);
@@ -51,10 +52,15 @@ router.get('/:cbu', async (req, res) => {
 
     try {
         const account = await Account.find().getByCbu(cbu).exec()
+
+        if (!account) {
+            res.status(404).json({"error": "Account does not exist"});
+        }
+
         res.status(200).json({
             cbu: account.cbu,
             balance: account.balance,
-            active: account.is_active
+            active: account.active
         })
     }catch (e) {
         res.status(400).json({error: e.message})
@@ -73,11 +79,11 @@ router.delete('/:cbu', async (req, res) => {
             throw new Error("No account was found");
         }
 
-        if (!account.is_active) {
+        if (!account.active) {
             throw new Error("Account already deleted");
         }
 
-        const newAccount =  await Account.findOneAndUpdate({_id: account._id}, {is_active: false}, {session, new:true});
+        const newAccount =  await Account.findOneAndUpdate({_id: account._id}, {active: false}, {session, new:true});
         await session.commitTransaction();
 
         res.status(204).json();
@@ -100,17 +106,18 @@ router.put('/:cbu', async (req, res) => {
             throw new Error('Parameter "balance" missing')
         }
 
+        const balanced = new BigDecimal(balance.toString());
         const account = await Account.find().getByCbu(cbu).exec()
 
         if (!account) {
             throw new Error("No account was found");
         }
 
-        if (!account.is_active) {
+        if (!account.active) {
             throw new Error("Account already deleted");
         }
 
-        await Account.findOneAndUpdate({_id: account._id}, {balance: parseInt(balance)});
+        await Account.findOneAndUpdate({_id: account._id}, {balance: balanced.toString()});
         res.status(204).send();
     } catch (e){
         res.status(400).json({error: e.message})
