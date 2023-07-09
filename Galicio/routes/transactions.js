@@ -13,11 +13,11 @@ function checkCbu(cbu) {
         throw new Error('Invalid verification digits');
     }
 
-    if (decomposedData.entityNumber !== CBU_ENTITY_NUMBER) {
+    if (decomposedData.entityNumber != CBU_ENTITY_NUMBER) {
         throw new Error('Transaction does not exist');
     }
 
-    return decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000n;
+    return (decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000n).toString();
 }
 
 router.get('/', async (req, res) => {
@@ -32,28 +32,28 @@ router.get('/', async (req, res) => {
 
         const filters = {}
         if(start){
-            filters["date"] = {$gte: start}
+            filters["date"] = {$gte: new Date(start)}
         }
 
         if(end){
 
             if(filters["date"]){
-                filters["date"]["$lte"] = start
+                filters["date"]["$lte"] = new Date(end)
             }else{
-                filters["date"] = {$lte: end}
+                filters["date"] = {$lte: new Date(end)}
             }
         }
 
         if(source){
-            filters.source = checkCbu(source).toString()
+            filters.source = checkCbu(source)
         }
 
         if(destination){
-            filters.destination = checkCbu(destination).toString()
+            filters.destination = checkCbu(destination)
         }
 
         if(involving){
-            const cbuRaw = checkCbu(involving).toString()
+            const cbuRaw = checkCbu(involving)
             filters["$or"] = [{ source: cbuRaw }, { destination: cbuRaw }]
         }
 
