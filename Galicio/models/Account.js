@@ -20,7 +20,6 @@ const AccountSchema = new Schema({
     }
 });
 
-//TODO: correjir esto para que sea atomico. Que pasa si se crean cuentas muy rapido
 AccountSchema.pre('save', async function (next) {
     if (this.isNew && this.get('_id') != 0) {
         const latestAccount = await this.constructor.findOne({}, {}, {sort: {_id: -1}});

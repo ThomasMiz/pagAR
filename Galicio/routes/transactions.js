@@ -30,43 +30,48 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
     const {source, destination, amount, motive, tag} = req.body
+    const session = await mongoose.startSession();
+    let transaction = null
 
     try {
-        if (!source) {
-            throw new Error("Parameter \"source\" missing")
-        }
+        await session.withTransaction(async () => {
+            if (!source) {
+                throw new Error("Parameter \"source\" missing")
+            }
 
-        if (!destination) {
-            throw new Error("Parameter \"destination\" missing")
-        }
+            if (!destination) {
+                throw new Error("Parameter \"destination\" missing")
+            }
 
-        if (!amount) {
-            throw new Error("Parameter \"amount\" missing")
-        }
+            if (!amount) {
+                throw new Error("Parameter \"amount\" missing")
+            }
 
-        if (source === destination) {
-            throw new Error("Transactions must be between different accounts")
-        }
+            if (source === destination) {
+                throw new Error("Transactions must be between different accounts")
+            }
 
-        const amountd = validators.validateTransactionAmount(amount);
-        const sourceAccount = await validators.validateCbuAccount(source, true, amountd);
-        const destinationAccount = await validators.validateCbuAccount(destination, false, amountd);
+            const amountd = validators.validateTransactionAmount(amount);
+            const sourceAccount = await validators.validateCbuAccount(source, true, amountd);
+            const destinationAccount = await validators.validateCbuAccount(destination, false, amountd);
 
-        const sourceBalance = new BigDecimal(sourceAccount.balance.toString());
-        const destinationBalance = new BigDecimal(destinationAccount.balance.toString());
+            const sourceBalance = new BigDecimal(sourceAccount.balance.toString());
+            const destinationBalance = new BigDecimal(destinationAccount.balance.toString());
 
-        await Account.findOneAndUpdate({_id: sourceAccount._id}, {balance: (sourceBalance.subtract(amountd)).toString()});
-        await Account.findOneAndUpdate({_id: destinationAccount._id}, {balance: (destinationBalance.add(amountd)).toString()});
+            await Account.findOneAndUpdate({_id: sourceAccount._id}, {balance: (sourceBalance.subtract(amountd)).toString()});
+            await Account.findOneAndUpdate({_id: destinationAccount._id}, {balance: (destinationBalance.add(amountd)).toString()});
 
-        const transaction =  await Transaction.create({
-            source: sourceAccount,
-            destination: destinationAccount,
-            amount: amountd.toString(),
-            date: new Date(),
-            motive: motive,
-            tag: tag,
+            transaction =  await Transaction.create({
+                source: sourceAccount,
+                destination: destinationAccount,
+                amount: amountd.toString(),
+                date: new Date(),
+                motive: motive,
+                tag: tag,
+            });
         });
-
+            
+        await session.commitTransaction();
         res.status(201).json({
             id: transaction._id,
             source: sourceAccount.cbu,
@@ -79,6 +84,8 @@ router.post('/', async (req, res) => {
 
     } catch (e) {
         res.status(400).json({error: e.message})
+    } finally {
+        session.endSession();
     }
 })
 

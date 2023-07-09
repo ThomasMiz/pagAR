@@ -15,7 +15,7 @@ try {
         throw 'No database name specified';
 
     // conf.mongo_uri = `mongodb://${env.DATABASE_HOSTS}/${env.DATABASE_NAME}?replicaSet=rs`
-    conf.mongo_uri = `mongodb://${env.DATABASE_HOSTS}/${env.DATABASE_NAME}`
+    conf.mongo_uri = `mongodb://localhost:27017,localhost:27018,localhost:27019?replicaSet=rs`
     conf.address = env.SERVER_HOST.substring(0, env.SERVER_HOST.indexOf(':'));
     conf.port = env.SERVER_HOST.substring(env.SERVER_HOST.indexOf(':') + 1);
 

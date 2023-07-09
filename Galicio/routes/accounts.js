@@ -21,29 +21,35 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+    const session = await mongoose.startSession();
     const {central} = req.body;
     let account = null;
+    let resAccount = null;
 
     try {
-        if (central) {
-            if (await Account.find().getCentral()) {
-                return res.status(409).json({error: "Central already exists"});
+        await session.withTransaction(async () => {
+            if (central) {
+                if (await Account.find().getCentral()) {
+                    return res.status(409).json({error: "Central already exists"});
+                } else {
+                    account =  await Account.create({_id: "0"});
+                }
             } else {
-                account =  await Account.create({_id: "0"});
+                account = await Account.create({});
             }
-        } else {
-            account = await Account.create({});
-        }
 
-        const resAccount = {
-            cbu: account.cbu,
-            balance: account.balance.toString(),
-            active: account.active
-        }
-
+            resAccount = {
+                cbu: account.cbu,
+                balance: account.balance.toString(),
+                active: account.active
+            }
+        });
+        await session.commitTransaction();    
         res.status(201).json(resAccount);
     } catch (e) {
         res.status(400).json({error: e.message});
+    } finally {
+        session.endSession();
     }
 });
 
@@ -62,65 +68,70 @@ router.get('/:cbu', async (req, res) => {
             balance: account.balance,
             active: account.active
         })
-    }catch (e) {
+    } catch (e) {
         res.status(400).json({error: e.message})
     }
 })
 
 router.delete('/:cbu', async (req, res) => {
     const session = await mongoose.startSession();
-    session.startTransaction();
     const cbu = req.params.cbu
 
     try {
-        const account = await Account.find().getByCbu(cbu).exec()
+        await session.withTransaction(async () => {
+            const account = await Account.find().getByCbu(cbu).exec()
 
-        if (!account) {
-            throw new Error("No account was found");
-        }
+            if (!account) {
+                throw new Error("No account was found");
+            }
 
-        if (!account.active) {
-            throw new Error("Account already deleted");
-        }
+            if (!account.active) {
+                throw new Error("Account already deleted");
+            }
 
-        const newAccount =  await Account.findOneAndUpdate({_id: account._id}, {active: false}, {session, new:true});
+            await Account.findOneAndUpdate({_id: account._id}, {active: false}, {session, new:true});
+        });
+
         await session.commitTransaction();
-
         res.status(204).json();
+
     } catch (e) {
-        await session.abortTransaction();
-        session.endSession();
         res.status(400).json({error: e.message})
+    } finally {
+        session.endSession();
     }
 })
 
 router.put('/:cbu', async (req, res) => {
+    const session = await mongoose.startSession();
     const {balance} = req.body
     const cbu = req.params.cbu
 
-    //TODO: make ACID this method
-
     try {
-
-        if (!balance) {
-            throw new Error('Parameter "balance" missing')
-        }
-
-        const balanced = new BigDecimal(balance.toString());
-        const account = await Account.find().getByCbu(cbu).exec()
-
-        if (!account) {
-            throw new Error("No account was found");
-        }
-
-        if (!account.active) {
-            throw new Error("Account already deleted");
-        }
-
-        await Account.findOneAndUpdate({_id: account._id}, {balance: balanced.toString()});
+        await session.withTransaction(async () => {
+            if (!balance) {
+                throw new Error('Parameter "balance" missing')
+            }
+    
+            const balanced = new BigDecimal(balance.toString());
+            const account = await Account.find().getByCbu(cbu).exec()
+    
+            if (!account) {
+                throw new Error("No account was found");
+            }
+    
+            if (!account.active) {
+                throw new Error("Account already deleted");
+            }
+    
+            await Account.findOneAndUpdate({_id: account._id}, {balance: balanced.toString()});
+        });
+        await session.commitTransaction();
         res.status(204).send();
     } catch (e){
         res.status(400).json({error: e.message})
+    } finally {
+        session.endSession();
     }
 })
 
