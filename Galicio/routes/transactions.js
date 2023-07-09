@@ -7,12 +7,70 @@ const cbuUtils = require('../cbuUtils');
 const BigDecimal = require("../bigdecimal");
 const {CBU_ENTITY_NUMBER} = require('../constants');
 
+function checkCbu(cbu) {
+    const decomposedData = cbuUtils.decompose(cbu);
+    if (!decomposedData.isOk) {
+        throw new Error('Invalid verification digits');
+    }
+
+    if (decomposedData.entityNumber !== CBU_ENTITY_NUMBER) {
+        throw new Error('Transaction does not exist');
+    }
+
+    return decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000n;
+}
+
 router.get('/', async (req, res) => {
+
+    const {page = 1, size= 15, start, end, source, destination, involving} = req.query
+
     try {
-        const txList = await Transaction.find();
+
+        if((source || destination) && involving){
+            throw new Error("Cant query by source or destination params with also involving param")
+        }
+
+        const filters = {}
+        if(start){
+            filters["date"] = {$gte: start}
+        }
+
+        if(end){
+
+            if(filters["date"]){
+                filters["date"]["$lte"] = start
+            }else{
+                filters["date"] = {$lte: end}
+            }
+        }
+
+        if(source){
+            filters.source = checkCbu(source).toString()
+        }
+
+        if(destination){
+            filters.destination = checkCbu(destination).toString()
+        }
+
+        if(involving){
+            const cbuRaw = checkCbu(involving).toString()
+            filters["$or"] = [{ source: cbuRaw }, { destination: cbuRaw }]
+        }
+
+        if(isNaN(page)){
+            throw new Error("Query param \"page\" must be a number")
+        }
+
+        if(isNaN(size)) {
+            throw new Error("Query param \"size\" must be a number")
+        }
+
+        const pagination = await Transaction.paginate(filters, {limit: size, page: page});
+        const transactions = pagination.docs
+
         const resTransaction = [];
 
-        txList.forEach(d => resTransaction.push({
+        transactions.forEach(d => resTransaction.push({
             id: d._id,
             source: cbuUtils.fromRaw(CBU_ENTITY_NUMBER, BigInt(d.source) / 10000000000000n, BigInt(d.source) % 10000000000000n),
             destination: cbuUtils.fromRaw(CBU_ENTITY_NUMBER, BigInt(d.destination) / 10000000000000n, BigInt(d.destination) % 10000000000000n),

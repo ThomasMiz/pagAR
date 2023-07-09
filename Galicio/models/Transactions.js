@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const cbuUtils = require('../cbuUtils');
 const Schema = mongoose.Schema;
+const mongoosePaginate = require('mongoose-paginate-v2')
 
 const CBU_ENTITY_NUMBER = BigInt("2");
 
@@ -52,5 +53,7 @@ TransactionSchema.query.involvingCbu = function (cbu) {
     const cbuRaw = decomposedData.accountNumber + decomposedData.branchNumber * 10000000000000n;
     return this.find().where({ $or: [{ source: cbuRaw }, { destination: cbuRaw }] })
 };
+
+TransactionSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model('Transaction', TransactionSchema);
