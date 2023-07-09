@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const cbuUtils = require('../cbuUtils')
 const {CBU_ENTITY_NUMBER} = require('../constants');
+const mongoosePaginate = require('mongoose-paginate-v2')
 
 const Schema = mongoose.Schema;
 
@@ -62,5 +63,7 @@ AccountSchema.query.getByCbu = function(cbu) {
 AccountSchema.query.getCentral = function() {
     return this.where({ _id: "0" }).findOne();
 }
+
+AccountSchema.plugin(mongoosePaginate);
 
 module.exports = mongoose.model('Account', AccountSchema);

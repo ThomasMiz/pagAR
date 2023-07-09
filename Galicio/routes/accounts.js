@@ -5,11 +5,25 @@ const mongoose = require("mongoose");
 const BigDecimal = require('../bigdecimal');
 
 router.get('/', async (req, res) => {
+    const {page = 1, size = 15} = req.query
+
     try {
-        const account = await Account.find().whereActive().exec()
+
+        if(isNaN(page)){
+            throw new Error("Query param \"page\" must be a number")
+        }
+
+        if(isNaN(size)){
+            throw new Error("Query param \"size\" must be a number")
+        }
+
+        const pagination = await Account.paginate({active: true}, {limit: size, page: page})
+        const accounts = pagination.docs
+
         const resAccount = []
 
-        account.forEach(d => resAccount.push({
+
+        accounts.forEach(d => resAccount.push({
             cbu: d.cbu,
             balance: d.balance,
             active: d.active
