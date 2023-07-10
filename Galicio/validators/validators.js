@@ -18,7 +18,7 @@ async function validateCbuAccount(cbu, isSource, amountd) {
 
     const isCentral = branchNumber == 0 && accountNumber == 0;
     if (isSource) {
-        if (!isCentral && amountd.isGreaterThan(sourceBalance)) {
+        if (!isCentral && amountd.isGreaterThan(account.balance)) {
             throw new Error("Insufficient Balance");
         }
     } else {

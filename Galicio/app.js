@@ -11,11 +11,8 @@ try {
         throw 'No server host specified';
     if (!env.DATABASE_HOSTS)
         throw 'No database hosts specified';
-    if (!env.DATABASE_NAME)
-        throw 'No database name specified';
 
-    //conf.mongo_uri = `mongodb://${env.DATABASE_HOSTS}/${env.DATABASE_NAME}`
-    conf.mongo_uri = `mongodb://localhost:27017,localhost:27018,localhost:27019?replicaSet=rs`
+    conf.mongo_uri = `mongodb://${env.DATABASE_HOSTS}?replicaSet=rs`
     conf.address = env.SERVER_HOST.substring(0, env.SERVER_HOST.indexOf(':'));
     conf.port = env.SERVER_HOST.substring(env.SERVER_HOST.indexOf(':') + 1);
 

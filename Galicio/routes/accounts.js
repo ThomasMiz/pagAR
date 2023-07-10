@@ -103,6 +103,10 @@ router.delete('/:cbu', async (req, res) => {
                 throw new Error("Account already deleted");
             }
 
+            if (account.isCentral) {
+                throw new Error("Cannot delete central account");
+            }
+
             await Account.findOneAndUpdate({_id: account._id}, {active: false}, {session, new:true});
         });
 

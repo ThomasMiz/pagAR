@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router();
+const mongoose = require("mongoose");
 const Transaction = require("../models/Transactions")
 const validators = require("../validators/validators")
 const Account = require("../models/Account");
@@ -89,9 +90,11 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const {source, destination, amount, motive, tag} = req.body
     const session = await mongoose.startSession();
-    let transaction = null
+    let transaction = null;
 
     try {
+        let sourceAccount = undefined, destinationAccount = undefined;
+
         await session.withTransaction(async () => {
             if (!source) {
                 throw new Error("Parameter \"source\" missing")
@@ -110,8 +113,8 @@ router.post('/', async (req, res) => {
             }
 
             const amountd = validators.validateTransactionAmount(amount);
-            const sourceAccount = await validators.validateCbuAccount(source, true, amountd);
-            const destinationAccount = await validators.validateCbuAccount(destination, false, amountd);
+            sourceAccount = await validators.validateCbuAccount(source, true, amountd);
+            destinationAccount = await validators.validateCbuAccount(destination, false, amountd);
 
             const sourceBalance = new BigDecimal(sourceAccount.balance.toString());
             const destinationBalance = new BigDecimal(destinationAccount.balance.toString());
@@ -128,8 +131,7 @@ router.post('/', async (req, res) => {
                 tag: tag,
             });
         });
-            
-        await session.commitTransaction();
+
         res.status(201).json({
             id: transaction._id,
             source: sourceAccount.cbu,
@@ -139,7 +141,6 @@ router.post('/', async (req, res) => {
             motive: transaction.motive,
             tag: transaction.tag,
         });
-
     } catch (e) {
         res.status(400).json({error: e.message})
     } finally {
