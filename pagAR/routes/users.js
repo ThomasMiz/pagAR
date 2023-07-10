@@ -11,9 +11,20 @@ router.get('/', async (req, res) => {
             return res.status(501).send({message: "Limit must be greater than 0"});
         }
     }
+    let usersRaw = await database.getUsers(limit);
+    let users = []
+
+    usersRaw.forEach(u => {
+        users.push({
+            alias: u.alias,
+            cbu: u.cbu,
+            dateJoined: u.date_joined,
+            firstName: u.first_name,
+            lastName: u.last_name
+        });
+    });
 
     let promises = [];
-    let users = await database.getUsers(limit);
     users.forEach(u => {
         promises.push((async () => {
             const acc = await entityApi.getAccountByCbu(u.cbu);

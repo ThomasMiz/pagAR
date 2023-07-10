@@ -47,7 +47,7 @@ async function main() {
     app.use(cors());
     app.use(express.json());
 
-    app.use('/', require('./routes/test'));
+    app.use(express.static('static'));
 
     app.use('/api/auth', require('./auth/auth'));
     app.use('/api/users', require('./routes/users'));

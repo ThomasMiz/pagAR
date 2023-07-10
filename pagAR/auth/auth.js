@@ -4,7 +4,8 @@ const jwt = require('jsonwebtoken');
 const forms = require('./forms');
 const jwtSecret = require('../jwtSecret');
 const database = require('../database');
-const entityApi = require('../entityApi')
+const entityApi = require('../entityApi');
+const cbuUtils = require('../cbuUtils');
 
 router.post('/register', async (req, res) => {
     const {error, value} = forms.registerForm(req.body);
@@ -14,6 +15,10 @@ router.post('/register', async (req, res) => {
     // Verify CBU exists and belongs to an active account, or create account if no CBU was specified.
     let cbu = value.cbu;
     if (cbu) {
+        if (cbuUtils.isCentral(cbu)) {
+            return res.status(400).send({message: "Cannot create a user with a central CBU"});
+        }
+
         try {
             const existingUser = await database.getUserByCbu(cbu);
             if (existingUser)
@@ -26,6 +31,8 @@ router.post('/register', async (req, res) => {
             existingAccount = await entityApi.getAccountByCbu(cbu);
             if (!existingAccount)
                 throw 'No such account';
+            if (!existingAccount.active)
+                return res.status(400).send({message: "Cannot create a user with a CBU from a deleted account"});
         } catch (error) {
             return res.status(400).send({message: "Couldn't find an account with CBU " + cbu});
         }

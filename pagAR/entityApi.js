@@ -83,7 +83,7 @@ function mapTransaction(tx) {
     }
 
     return {
-        id: tx.id.toString() + cbuUtils.decompose(src).entityNumber.toString().padStart(3, '0'),
+        id: tx.id.toString() + cbuUtils.decompose(tx.source).entityNumber.toString().padStart(3, '0'),
         source: src,
         destination: dst,
         amount: tx.amount,
@@ -93,7 +93,7 @@ function mapTransaction(tx) {
 }
 
 function getApiForEntityOrThrow(entityNumber) {
-    const apiInstance = entityApis.get(entityNumber);
+    const apiInstance = entityApis.get(parseInt(entityNumber));
     if (apiInstance) {
         return apiInstance;
     }
@@ -171,6 +171,7 @@ async function getTransactionById(id) {
 async function initializeEntityApis() {
     // Financial Entities are listed in this map, with the key being the entity number.
     entityApis.set(1, new EntityApi("http://localhost:8000", 1, "Santander Lago"));
+    entityApis.set(2, new EntityApi("http://localhost:8080", 2, "Galicio"));
 
     allEntityNumbers = [... entityApis.keys()]
     // For each entity API, call the create central account endpoint.

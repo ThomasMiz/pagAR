@@ -5,32 +5,31 @@ const mongoose = require("mongoose");
 const BigDecimal = require('../bigdecimal');
 
 router.get('/', async (req, res) => {
-    const {page = 1, size = 15} = req.query
+    const {page = 1, size = 15} = req.query;
 
     try {
-
-        if(isNaN(page)){
-            throw new Error("Query param \"page\" must be a number")
+        if (isNaN(page)) {
+            throw new Error("Query param \"page\" must be a number");
         }
 
-        if(isNaN(size)){
-            throw new Error("Query param \"size\" must be a number")
+        if (isNaN(size)) {
+            throw new Error("Query param \"size\" must be a number");
         }
 
-        const pagination = await Account.paginate({active: true}, {limit: size, page: page})
-        const accounts = pagination.docs
+        const pagination = await Account.paginate({active: true}, {limit: size, page: page});
+        const accounts = pagination.docs;
 
-        const resAccount = []
-
+        const resAccount = [];
 
         accounts.forEach(d => resAccount.push({
             cbu: d.cbu,
             balance: d.balance,
             active: d.active
-        }))
-        res.status(200).json(resAccount)
-    }catch (e) {
-        res.status(400).json({error: e.message})
+        }));
+
+        return res.status(200).json(resAccount).send();
+    } catch (e) {
+        return res.status(400).json({error: e.message}).send();
     }
 });
 
@@ -44,9 +43,9 @@ router.post('/', async (req, res) => {
         await session.withTransaction(async () => {
             if (central) {
                 if (await Account.find().getCentral()) {
-                    return res.status(409).json({error: "Central already exists"});
+                    return res.status(409).json({error: "Central already exists"}).send();
                 } else {
-                    account =  await Account.create({_id: "0"});
+                    account = await Account.create({_id: "0"});
                 }
             } else {
                 account = await Account.create({});
@@ -56,44 +55,44 @@ router.post('/', async (req, res) => {
                 cbu: account.cbu,
                 balance: account.balance.toString(),
                 active: account.active
-            }
+            };
+
+            return res.status(201).json(resAccount).send();
         });
-        await session.commitTransaction();    
-        res.status(201).json(resAccount);
     } catch (e) {
-        res.status(400).json({error: e.message});
+        return res.status(400).json({error: e.message}).send();
     } finally {
-        session.endSession();
+        await session.endSession();
     }
 });
 
 router.get('/:cbu', async (req, res) => {
-    const cbu = req.params.cbu
+    const cbu = req.params.cbu;
 
     try {
-        const account = await Account.find().getByCbu(cbu).exec()
+        const account = await Account.find().getByCbu(cbu).exec();
 
         if (!account) {
-            res.status(404).json({"error": "Account does not exist"});
+            res.status(404).json({"error": "Account does not exist"}).send();
         }
 
         res.status(200).json({
             cbu: account.cbu,
             balance: account.balance,
             active: account.active
-        })
+        }).send();
     } catch (e) {
-        res.status(400).json({error: e.message})
+        res.status(400).json({error: e.message}).send();
     }
 })
 
 router.delete('/:cbu', async (req, res) => {
     const session = await mongoose.startSession();
-    const cbu = req.params.cbu
+    const cbu = req.params.cbu;
 
     try {
         await session.withTransaction(async () => {
-            const account = await Account.find().getByCbu(cbu).exec()
+            const account = await Account.find().getByCbu(cbu).exec();
 
             if (!account) {
                 throw new Error("No account was found");
@@ -111,10 +110,9 @@ router.delete('/:cbu', async (req, res) => {
         });
 
         await session.commitTransaction();
-        res.status(204).json();
-
+        return res.status(204).json().send();
     } catch (e) {
-        res.status(400).json({error: e.message})
+        return res.status(400).json({error: e.message}).send();
     } finally {
         session.endSession();
     }
@@ -122,17 +120,17 @@ router.delete('/:cbu', async (req, res) => {
 
 router.put('/:cbu', async (req, res) => {
     const session = await mongoose.startSession();
-    const {balance} = req.body
-    const cbu = req.params.cbu
+    const {balance} = req.body;
+    const cbu = req.params.cbu;
 
     try {
         await session.withTransaction(async () => {
             if (!balance) {
-                throw new Error('Parameter "balance" missing')
+                throw new Error('Parameter "balance" missing');
             }
     
             const balanced = new BigDecimal(balance.toString());
-            const account = await Account.find().getByCbu(cbu).exec()
+            const account = await Account.find().getByCbu(cbu).exec();
     
             if (!account) {
                 throw new Error("No account was found");
@@ -145,9 +143,9 @@ router.put('/:cbu', async (req, res) => {
             await Account.findOneAndUpdate({_id: account._id}, {balance: balanced.toString()});
         });
         await session.commitTransaction();
-        res.status(204).send();
+        return res.status(204).send();
     } catch (e){
-        res.status(400).json({error: e.message})
+        return res.status(400).json({error: e.message}).send();
     } finally {
         session.endSession();
     }

@@ -29,13 +29,14 @@ router.get('/involving/:cbuOrAlias/', async (req, res) => {
 });
 
 router.get('/:id/', async (req, res) => {
-    const id = parseInt(req.params.id);
+    const id = req.params.id.toString();
     if (!id)
         return res.status(404).send({message: "Invalid transaction id"});
 
     try {
+        console.log(req.params.id, id)
         const transaction = await entityApi.getTransactionById(id);
-        res.send(transaction);
+        return res.status(200).send(transaction);
     } catch {
         return res.status(404).send({message: "Transaction not found"});
     }

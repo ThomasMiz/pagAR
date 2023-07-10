@@ -1,0 +1,316 @@
+openapi: 3.0.3
+info:
+  title: API de Banco Central
+  version: 1.0.0
+  description: El banco central expone este API para ser consumido por las aplicaciones de los usuarios finales.
+servers:
+  - url: http://localhost:6969
+    description: Servidor Express corriendo localmente
+paths:
+  /api/auth/login:
+    post:
+      operationId: api_login
+      description: Used to log in as an user, obtaining a JWT token.
+      tags:
+      - api
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginForm'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginCredentials'
+          description: ''
+  /api/auth/register:
+    post:
+      operationId: api_register
+      description: Used to register a new user, obtaining a JWT token.
+      tags:
+      - api
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterForm'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  
+  /api/users:
+    get:
+      operationId: api_users_retrieve
+      description: Lists all users. This endpoint is for testing only and not intended to be used in production!
+      tags:
+      - api
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+          required: false
+          description: The maximum amount of users to retrieve.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserWithAccount'
+          description: ''
+  /api/users/{cbuOrAlias}:
+    get:
+      operationId: api_users_retrieve_cbuoralias
+      description: Gets an account by CBU or alias.
+      parameters:
+      - in: path
+        name: cbuOrAlias
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithAccount'
+          description: ''
+
+
+
+  /api/transactions/involving/{cbuOrAlias}:
+    get:
+      operationId: api_transactions_retrieve
+      description: Lists all transactions involving a user.
+      tags:
+      - api
+      parameters:
+        - in: path
+          name: cbuOrAlias
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          required: false
+          description: Page number, starting at 1
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 15
+          required: false
+          description: Page size
+        - in: query
+          name: start
+          schema:
+            type: string
+            format: decimal
+            pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]+)?Z?$
+          required: false
+          description: Minimum date inclusive in ISO format ("YYYY-MM-DDThh:mm:ss.mmmmZ")
+        - in: query
+          name: end
+          schema:
+            type: string
+            format: decimal
+            pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(.[0-9]+)?Z?$
+          required: false
+          description: Maximum date inclusive in ISO format ("YYYY-MM-DDThh:mm:ss.mmmmZ")
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+          description: ''
+  /api/transactions/{id}:
+    get:
+      operationId: api_transactions_retrieve_by_id
+      description: Gets a transaction by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+  /api/transactions:
+    post:
+      security:
+        - bearerAuth: []
+      operationId: api_transactions_create
+      description: Creates a new transaction.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTransactionForm'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: ''
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginForm:
+      type: object
+      properties:
+        alias:
+          type: string
+          pattern: ^[a-z][0-9a-z\.-]{5,19}$
+        password:
+          type: string
+      required:
+      - alias
+      - password
+    LoginCredentials:
+      type: object
+      properties:
+        token:
+          type: string
+          readOnly: true
+        user:
+          type: string
+          readOnly: true
+    RegisterForm:
+      type: object
+      properties:
+        alias:
+          type: string
+          pattern: ^[a-z][0-9a-z\.-]{5,19}$
+        cbu:
+          type: string
+        password:
+          type: string
+        firstName:
+          type: string
+          pattern: ^[0-9\.\-A-Za-záéíóú]{3,20}$
+        lastName:
+          type: string
+          pattern: ^[0-9\.\-A-Za-záéíóú]{3,20}$
+      required:
+      - alias
+      - password
+      - firstName
+      - lastName
+    User:
+      type: object
+      properties:
+        alias:
+          type: string
+          readOnly: true
+          pattern: ^[a-z][0-9a-z\.-]{5,19}$
+        cbu:
+          type: string
+          readOnly: true
+        firstName:
+          type: string
+          readOnly: true
+        lastName:
+          type: string
+          readOnly: true
+    UserWithAccount:
+      type: object
+      properties:
+        alias:
+          type: string
+          readOnly: true
+          pattern: ^[a-z][0-9a-z\.-]{5,19}$
+        cbu:
+          type: string
+          readOnly: true
+        dateJoined:
+          type: string
+          readOnly: true
+        firstName:
+          type: string
+          readOnly: true
+        lastName:
+          type: string
+          readOnly: true
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,22}(?:\.\d{0,2})?$
+          readOnly: true
+        active:
+          type: boolean
+          readOnly: true
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        source:
+          type: string
+        destination:
+          type: string
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,22}(?:\.\d{0,2})?$
+        date:
+          type: string
+          format: date-time
+          readOnly: true
+        motive:
+          type: string
+          nullable: true
+          maxLength: 200
+      required:
+      - source
+      - destination
+      - amount
+    CreateTransactionForm:
+      type: object
+      properties:
+        destination:
+          type: string
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,22}(?:\.\d{0,2})?$
+        motive:
+          type: string
+          nullable: true
+          maxLength: 200
+      required:
+      - destination
+      - amount
