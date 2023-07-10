@@ -34,7 +34,6 @@ router.get('/:id/', async (req, res) => {
         return res.status(404).send({message: "Invalid transaction id"});
 
     try {
-        console.log(req.params.id, id)
         const transaction = await entityApi.getTransactionById(id);
         return res.status(200).send(transaction);
     } catch {
@@ -63,7 +62,7 @@ router.post('/', userAuthenticated, async (req, res) => {
 
     try {
         const tx = await entityApi.createTransaction(sourceCbu, destinationCbu, value.amount, value.motive);
-    res.send(tx);
+        return res.status(200).send(tx);
     } catch (error) {
         return res.status(error.response.status).send(error.response.data);
     }

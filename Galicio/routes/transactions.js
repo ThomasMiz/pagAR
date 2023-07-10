@@ -80,7 +80,10 @@ router.get('/', async (req, res) => {
 
         return res.status(200).json(resTransaction).send();
     } catch (e) {
-        return res.status(400).json({error: e.message}).send();
+        try {
+            return res.status(400).json({error: e.message}).send();
+        } catch {
+        }
     }
 });
 
@@ -141,7 +144,7 @@ router.post('/', async (req, res) => {
     } catch (e) {
         return res.status(400).json({error: e.message}).send();
     } finally {
-        session.endSession();
+        await session.endSession();
     }
 });
 
