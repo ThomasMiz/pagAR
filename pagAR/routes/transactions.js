@@ -62,7 +62,7 @@ router.post('/', userAuthenticated, async (req, res) => {
 
     try {
         const tx = await entityApi.createTransaction(sourceCbu, destinationCbu, value.amount, value.motive);
-        return res.status(200).send(tx);
+        return res.status(201).send(tx);
     } catch (error) {
         return res.status(error.response.status).send(error.response.data);
     }

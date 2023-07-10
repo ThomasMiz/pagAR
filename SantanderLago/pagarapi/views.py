@@ -196,11 +196,13 @@ def create_transaction(request):
         return Response({"error": "Error while transferring founds"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'DELETE'])
 @permission_classes([AllowAny])
 def transaction_by_id(request, id):
     if request.method == 'GET':
         return get_transaction(request, id)
+    if request.method == 'DELETE':
+        return delete_transaction(request, id)
     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -210,3 +212,23 @@ def get_transaction(request, id):
         return Response(serializers.TransactionSerializer(tx, many=False).data, status=status.HTTP_200_OK)
     except models.Account.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+def delete_transaction(request, id):
+    try:
+        with transaction.atomic():
+            tx = models.Transaction.objects.get(id=id)
+            source = tx.source
+            destination = tx.destination
+
+            source.balance += tx.amount
+            destination.balance -= tx.amount
+
+            tx.delete()
+            source.save()
+            destination.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+    except models.Transaction.DoesNotExist:
+        return Response({"error": "Transaction not found"}, status=status.HTTP_404_NOT_FOUND)
+    except IntegrityError:
+        return Response({"error": "Error while transferring founds"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

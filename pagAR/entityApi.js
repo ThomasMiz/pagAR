@@ -68,6 +68,10 @@ class EntityApi {
     getTransactionById(id) {
         return axios.get(this.baseUrl + "/api/transactions/" + id);
     }
+
+    deleteTransaction(id) {
+        return axios.delete(this.baseUrl + "/api/transactions/" + id);
+    }
 }
 
 const entityApis = new Map();
@@ -156,7 +160,13 @@ async function createTransaction(sourceCbu, destinationCbu, amount, motive) {
     const destApi = getApiForEntityOrThrow(destEntityNumber);
 
     const sourceTx = await sourceApi.createTransaction(sourceCbu, sourceApi.centralCbu, amount, motive, destinationCbu);
-    const destTx = await destApi.createTransaction(destApi.centralCbu, destinationCbu, amount, motive, sourceCbu);
+
+    try {
+        await destApi.createTransaction(destApi.centralCbu, destinationCbu, amount, motive, sourceCbu);
+    } catch (e) {
+        await sourceApi.deleteTransaction(sourceTx.data.id);
+        throw e;
+    }
 
     return mapTransaction(sourceTx.data);
 }

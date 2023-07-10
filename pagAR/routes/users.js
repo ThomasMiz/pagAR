@@ -56,10 +56,16 @@ router.get('/:cbuOrAlias/', async (req, res) => {
     }
 
     const acc = await entityApi.getAccountByCbu(user.cbu);
-    user.balance = acc.balance;
-    user.active = acc.active;
 
-    res.send(user);
+    res.status(200).json({
+        alias: user.alias,
+        cbu: user.cbu,
+        dateJoined: user.dateJoined,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        balance: acc.balance,
+        active: acc.active
+    });
 });
 
 module.exports = router;

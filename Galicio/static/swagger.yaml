@@ -97,9 +97,7 @@ paths:
           description: No response body
     delete:
       operationId: api_accounts_destroy
-      description: Creates a new account. If ?central=true is specified, attempts
-        to create a central account (with a CBU where all non-verification digits
-        are 0) if it doesn't already exist.
+      description: Updates an account
       parameters:
       - in: path
         name: cbu
@@ -210,6 +208,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Transaction'
+          description: ''
+    delete:
+      operationId: api_transactions_delete
+      description: Undoes a transaction by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      responses:
+        '204':
           description: ''
 components:
   schemas:

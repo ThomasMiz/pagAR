@@ -78,11 +78,14 @@ router.get('/', async (req, res) => {
             tag: d.tag
         }));
 
+        console.info(`[INFO] GET /transactions`);
         return res.status(200).json(resTransaction).send();
     } catch (e) {
         try {
+            console.error(`[ERROR] GET /transactions: ${e.message}`);
             return res.status(400).json({error: e.message}).send();
         } catch {
+
         }
     }
 });
@@ -132,6 +135,7 @@ router.post('/', async (req, res) => {
             });
         });
 
+        console.info(`[INFO] POST /transactions`);
         return res.status(201).json({
             id: transaction._id,
             source: sourceAccount.cbu,
@@ -142,7 +146,12 @@ router.post('/', async (req, res) => {
             tag: transaction.tag,
         }).send();
     } catch (e) {
-        return res.status(400).json({error: e.message}).send();
+        try {
+            console.info(`[ERROR] POST /transactions: ${e.message}`);
+            return res.status(400).json({error: e.message}).send();
+        } catch {
+
+        }
     } finally {
         await session.endSession();
     }
@@ -154,6 +163,12 @@ router.get('/:id', async (req, res) => {
     try {
         const transaction = await Transaction.findOne({"_id": id});
 
+        if (!transaction) {
+            console.warn(`[WARN] GET /transactions/${id}: not found`);
+            return res.status(404).json({error: "Transaction not found"}).send();
+        }
+
+        console.info(`[INFO] GET /transactions/${id}`);
         return res.status(200).json({
             id: transaction._id,
             source: cbuUtils.fromRaw(CBU_ENTITY_NUMBER, BigInt(transaction.source) / 10000000000000n, BigInt(transaction.source) % 10000000000000n),
@@ -164,7 +179,45 @@ router.get('/:id', async (req, res) => {
             tag: transaction.tag,
         }).send();
     } catch (e) {
-        return res.status(500).json({error: e.message}).send();
+        try {
+            console.error(`[ERROR] GET /transactions/${id}: ${e.message}`);
+            return res.status(500).json({error: e.message}).send();
+        } catch {
+
+        }
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    const id = req.params.id.toString();
+
+    try {
+        await session.withTransaction(async () => {
+            const transaction = await Transaction.findOne({"_id": id});
+
+            if (!transaction) {
+                return res.status(404).json({error: "Transaction not found"}).send();
+            }
+
+            const sourceAccount = await Account.find({_id: transaction.source}).exec();
+            const destinationAccount = await Account.find({_id: transaction.destination}).exec();
+
+            const sourceBalance = new BigDecimal(sourceAccount.balance.toString());
+            const destinationBalance = new BigDecimal(destinationAccount.balance.toString());
+
+            await Account.findOneAndUpdate({_id: sourceAccount._id}, {balance: (sourceBalance.add(amountd)).toString()});
+            await Account.findOneAndUpdate({_id: destinationAccount._id}, {balance: (destinationBalance.subtract(amountd)).toString()});
+            await Transaction.deleteOne({_id: transaction._id});
+            console.error(`[INFO] DELETE /transactions/${id}`);
+            return res.status(204).send();
+        });
+    } catch (e) {
+        try {
+            console.error(`[ERROR] DELETE /transactions/${id}: ${e.message}`);
+            return res.status(500).json({error: e.message}).send();
+        } catch {
+
+        }
     }
 });
 

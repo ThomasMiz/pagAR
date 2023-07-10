@@ -45,7 +45,6 @@ router.post('/register', async (req, res) => {
         }
     }
 
-
     const hash = bcrypt.hashSync(value.password, bcrypt.genSaltSync(10));
 
     try {
@@ -76,7 +75,7 @@ router.post('/login', async (req, res) => {
         return res.status(400).send("Invalid alias or password");
 
     const token = jwt.sign({alias: user.alias}, jwtSecret);
-    return res.status(200).send({"token": token, "user": {
+    return res.status(201).send({"token": token, "user": {
         alias: user.alias,
         cbu: user.cbu,
         dateJoined: user.dateJoined,
